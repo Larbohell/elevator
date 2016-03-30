@@ -56,7 +56,7 @@ static void __attribute__((constructor)) elev_init(void){
         elev_write_doorLight(0);
         elev_write_floorIndicator(0);
         break;
-
+	
     case ET_Simulation:
         ;
         char ip[16] = {0};
@@ -85,6 +85,7 @@ static void __attribute__((constructor)) elev_init(void){
         send(sockfd, (char[4]){0}, 4, 0);
 
         break;
+        
     }
 }
 

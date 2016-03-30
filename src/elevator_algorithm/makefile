@@ -8,6 +8,7 @@ LDFLAGS = -lcomedi -lm
 SOURCES := $(patsubst ./%, %, $(shell find . -name '*.c'))
 OBJECTS = $(addprefix $(OBJDIR)/, $(SOURCES:.c=.o))
 
+CGOFILES=main.go
 
 OBJDIR = obj
 
