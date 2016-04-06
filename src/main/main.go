@@ -1,47 +1,63 @@
 package main
-import "driver"
-import "elevator"
+
+//import "driver"
+//import "elevator"
+import "network"
+
 //import "fmt"
 
 func main() {
-	driver.Elevator_init()
-	
-	if (driver.Elevator_get_floor_sensor_signal() == -1){
-		elevator.Fsm_onInitBetweenFloors()
-	} else {
-		elevator.Fsm_onInitOnFloor()
-	}
+	/*
+		driver.Elevator_init()
 
-	var prevFloor int = driver.Elevator_get_floor_sensor_signal() //default value
-	var currentFloor int
-	var previous_button_value[elevator.N_FLOORS][elevator.N_BUTTONS] bool
-
-	//go checkTimer()
-
-	//On button pressed
-	for {
-			for floor := 0; floor < elevator.N_FLOORS; floor++ {
-				for button := 0; button < elevator.N_BUTTONS; button++ {
-
-					var button_value bool = driver.Elevator_is_button_pushed(driver.Button(button), floor)
-					if (button_value && button_value != previous_button_value[floor][button]){
-						elevator.Fsm_onRequestButtonPress(floor, driver.Button(button))
-					}
-					previous_button_value[floor][button] = button_value
-				}
-			}
-
-		
-		//On floor arrival
-		currentFloor = driver.Elevator_get_floor_sensor_signal()
-
-		if currentFloor != -1 && currentFloor != prevFloor {
-			elevator.Fsm_onFloorArrival(currentFloor)
+		if (driver.Elevator_get_floor_sensor_signal() == -1){
+			elevator.Fsm_onInitBetweenFloors()
+		} else {
+			elevator.Fsm_onInitOnFloor()
 		}
-		prevFloor = currentFloor
-	}
 
+		var prevFloor int = driver.Elevator_get_floor_sensor_signal() //default value
+		var currentFloor int
+		var previous_button_value[elevator.N_FLOORS][elevator.N_BUTTONS] bool
+
+		//go checkTimer()
+
+		//On button pressed
+		for {
+				for floor := 0; floor < elevator.N_FLOORS; floor++ {
+					for button := 0; button < elevator.N_BUTTONS; button++ {
+
+						var button_value bool = driver.Elevator_is_button_pushed(driver.Button(button), floor)
+						if (button_value && button_value != previous_button_value[floor][button]){
+							elevator.Fsm_onRequestButtonPress(floor, driver.Button(button))
+						}
+						previous_button_value[floor][button] = button_value
+					}
+				}
+
+
+			//On floor arrival
+			currentFloor = driver.Elevator_get_floor_sensor_signal()
+
+			if currentFloor != -1 && currentFloor != prevFloor {
+				elevator.Fsm_onFloorArrival(currentFloor)
+			}
+			prevFloor = currentFloor
+		}
+	*/
+
+	//Testing UDP module
+	send_ch := make(chan network.Udp_message)
+	receive_ch := make(chan network.Udp_message)
+
+	_ = network.Udp_init(20011, 20011, 1024, send_ch, receive_ch)
+
+	msg := network.Udp_message{Raddr: "broadcast", Data: "hello world"}
+	for {
+		send_ch <- msg
+	}
 }
+
 /*
 func checkTimer(){
 	for {
