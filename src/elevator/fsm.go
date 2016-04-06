@@ -1,6 +1,8 @@
 package elevator
 
 import "driver"
+import "network"
+//import "fmt"
 
 var elevator Elevator
 
@@ -50,6 +52,17 @@ func Fsm_onFloorArrival(newFloor int) {
 }
 
 func Fsm_onRequestButtonPress(button_floor int, button driver.Button){
+	////////////////////////////////////////////////
+	network.Send_floor(button_floor)
+	// ELEVATOR STUCK HERE
+	///////////////////////////////////////////////
+
+	//fmt.Println("Here")
+	//received_floor := network.Receive_floor()
+	//fmt.Println("There")
+	//fmt.Println("Received floor: %d\n", received_floor)
+
+	/*
 	if (external_button){
 		switch(elevator_role){
 		case MASTER:
@@ -64,7 +77,7 @@ func Fsm_onRequestButtonPress(button_floor int, button driver.Button){
 			inform_master(button_floor int, button driver.Button);
 	}
 	///////// Move code below to handle_order() function or something similar
-	
+	*/
 	
 	switch (elevator.behaviour){
 	case EB_DoorOpen:
@@ -94,6 +107,7 @@ func Fsm_onRequestButtonPress(button_floor int, button driver.Button){
 	Print_status(elevator);
 }
 
+/*
 func send_button_press(button_floor int, button driver.Button){
 	switch (elevator_role){
 		case MASTER:
@@ -123,6 +137,8 @@ func calc_best_suited_elevator(){
 func Fsm_onOrderReceived(){
 
 }
+
+*/
 
 func Fsm_onDoorTimeout(){
 	switch(elevator.behaviour){
