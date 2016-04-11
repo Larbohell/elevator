@@ -116,12 +116,12 @@ func Elevator_init(floorSensorChannel chan int, arrivedAtFloorChannel chan int){
 		select{
 			case floor := <- arrivedAtFloorChannel:
 				arrivedAtFloorChannel <- floor
-				return
+				Elevator_set_motor_direction(MOTOR_DIRECTION_STOP)
 
 			case <- time.After(10*time.Second):
 				Elevator_set_motor_direction(MOTOR_DIRECTION_STOP)
 				// Send error on error channel
-				return
+		}
 	}
 }
 

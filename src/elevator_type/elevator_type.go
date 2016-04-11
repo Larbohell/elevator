@@ -27,7 +27,7 @@ type Elevator struct {
 }
 
 type ButtonInfo struct {
-	Button Button
+	Button int
 	Floor int
 	Value int
 }
