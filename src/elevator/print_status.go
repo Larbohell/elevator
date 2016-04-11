@@ -2,26 +2,27 @@ package elevator
 
 import "fmt"
 import "driver"
+import "elevator_type"
 
-func Print_status(elevator Elevator){
+func Print_status(elevator elevator_type.Elevator){
 	fmt.Printf("****Elevator status**** \n")
-	fmt.Printf("Floor: %d\n", elevator.floor )
+	fmt.Printf("Floor: %d\n", elevator.Floor )
 	
-	switch(elevator.dir){
-	case Up:
+	switch(elevator.Dir){
+	case elevator_type.Up:
 		fmt.Printf("Direction: Up\n")
-	case Down:
+	case elevator_type.Down:
 		fmt.Printf("Direction: Down\n")
-	case Stop:
+	case elevator_type.Stop:
 		fmt.Printf("Direction: Stop\n")
 	}
 
-	switch(elevator.behaviour){
-	case EB_Idle:
+	switch(elevator.Behaviour){
+	case elevator_type.EB_Idle:
 		fmt.Printf("State: Idle\n")
-	case EB_Moving:
+	case elevator_type.EB_Moving:
 		fmt.Printf("State: Moving\n")
-	case EB_DoorOpen:
+	case elevator_type.EB_DoorOpen:
 		fmt.Printf("State: Door Open\n")
 	}
 	
@@ -29,13 +30,13 @@ func Print_status(elevator Elevator){
 
 	fmt.Printf("  +--------------------+\n");
     fmt.Printf("  |  | up  | dn  | cab |\n");
-    for f := N_FLOORS-1; f >= 0; f--{
+    for f := elevator_type.N_FLOORS-1; f >= 0; f--{
         fmt.Printf("  | %d", f);
-        for btn := 0; btn < N_BUTTONS; btn++{
-            if f == N_FLOORS-1 && btn == int(driver.BUTTON_OUTSIDE_UP) || f == 0 && btn == int(driver.BUTTON_OUTSIDE_DOWN) {
+        for btn := 0; btn < elevator_type.N_BUTTONS; btn++{
+            if f == elevator_type.N_FLOORS-1 && btn == int(driver.BUTTON_OUTSIDE_UP) || f == 0 && btn == int(driver.BUTTON_OUTSIDE_DOWN) {
                 fmt.Printf("|     ");
             } else {
-            	if elevator.requests[f][btn] == 1{
+            	if elevator.Requests[f][btn] == 1{
             		fmt.Printf("|  #  ")
             	} else {
             		fmt.Printf("|  -  ")
