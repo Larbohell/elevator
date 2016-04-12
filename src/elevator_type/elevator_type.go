@@ -3,37 +3,45 @@ package elevator_type
 const N_FLOORS int = 4
 const N_BUTTONS int = 3
 
-type Elevator_Behaviour int
+type ElevatorState int
 
 const (
-	EB_Idle Elevator_Behaviour = 0
-	EB_DoorOpen Elevator_Behaviour = 1 
-	EB_Moving Elevator_Behaviour = 2
+	State_Idle     ElevatorState = 0
+	State_DoorOpen ElevatorState = 1
+	State_Moving   ElevatorState = 2
 )
 
 type Dir int
 
 const (
 	Down Dir = -1
-	Up Dir = 1
+	Up   Dir = 1
 	Stop Dir = 0
 )
 
-type Elevator struct {
-	Floor int
-	Dir Dir
-	Requests[N_FLOORS][N_BUTTONS] int
-	Behaviour Elevator_Behaviour
+type ElevatorInfo struct {
+	CurrentFloor int
+	Direction    Dir
+	Requests     [N_FLOORS][N_BUTTONS]int
+	State        ElevatorState
 }
 
+type Button int
+
+const (
+	BUTTON_OUTSIDE_UP     Button = 0
+	BUTTON_OUTSIDE_DOWN   Button = 1
+	BUTTON_INSIDE_COMMAND Button = 2
+)
+
 type ButtonInfo struct {
-	Button int
-	Floor int
-	Value int
+	Button Button
+	Floor  int
+	Value  int
 }
 
 type Message struct {
-	FromMaster bool
-	ElevatorInfo Elevator
-	ButtonInfo int
+	FromMaster   bool
+	ElevatorInfo ElevatorInfo
+	ButtonInfo   int
 }
