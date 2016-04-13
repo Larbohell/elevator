@@ -7,7 +7,7 @@ type ElevatorState int
 
 const (
 	State_Idle     ElevatorState = 0
-	State_DoorOpen ElevatorState = 1
+	State_DoorOpen ElevatorState = 1 // Not used, remove
 	State_Moving   ElevatorState = 2
 )
 
@@ -42,9 +42,12 @@ type ButtonInfo struct {
 
 type Message struct {
 	FromMaster         bool
+	AcknowledgeMessage bool
 	NewOrder           bool
 	ElevatorInfoUpdate bool
 
+	MessageFrom  string
+	MessageTo    string
 	ElevatorInfo ElevatorInfo
 	ButtonInfo   ButtonInfo
 }

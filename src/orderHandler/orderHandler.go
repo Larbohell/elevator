@@ -16,3 +16,7 @@ func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan Butto
 		}
 	}
 }
+
+func BestElevatorForTheJob(button ButtonInfo) string {
+	return "129.24.187.159"
+}

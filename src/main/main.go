@@ -11,9 +11,11 @@ import "network"
 //import . "strconv"
 
 //"129.241.187.156" = workspace 9
-//"129.241.187.159" = workspace 11
+//"129.24.187.159" = workspace 11
 
 func main() {
+
+	const localIP string = "129.241.187.159" //workspace 11
 
 	var elevator ElevatorInfo
 	previousFloor := N_FLOORS + 1 // Impossible floor
@@ -45,16 +47,14 @@ func main() {
 	updateElevatorInfoChannel <- elevator
 
 	//Running threads
-	//go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel)
-	go Master(elevator, externalOrderChannel, updateElevatorInfoChannel)
+	go network.Slave(elevator, localIP, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel)
+	//go network.Master(elevator, localIP, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel)
 	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel)
 
 	for {
 		select {
 		case buttonPushed := <-addToRequestsChannel:
-			errorChannel <- "1"
 			setButtonLightChannel <- buttonPushed
-			errorChannel <- "2"
 			switch elevator.State {
 
 			case State_Idle:
