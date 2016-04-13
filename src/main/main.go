@@ -2,7 +2,7 @@ package main
 
 import "driver"
 import . "elevator_type"
-import "errorHandler"
+import . "statusHandler"
 import "orderHandler"
 import "network"
 
@@ -25,11 +25,15 @@ func main() {
 	setButtonLightChannel := make(chan ButtonInfo, 1)
 	clearButtonLightsAtFloorChannel := make(chan int, 1)
 
+	//Debugging
+	errorChannel := make(chan string)
+	StatusChannel = make(chan string)
+
 	newOrderChannel := make(chan ButtonInfo, 1)
 	removeOrderChannel := make(chan ButtonInfo, 1)
 	initIsFinished := make(chan bool)
 	arrivedAtFloorChannel := make(chan int, 1)
-	errorChannel := make(chan string)
+
 	addToRequestsChannel := make(chan ButtonInfo)
 	stop := make(chan bool, 1)
 	initialElevatorStateChannel := make(chan ElevatorInfo, 1)
@@ -40,7 +44,8 @@ func main() {
 	updateElevatorInfoChannel := make(chan ElevatorInfo, 1)
 
 	//init
-	go errorHandler.Error_handler(errorChannel)
+	go Error_handler(errorChannel)
+	go Status_handler()
 	go driver.Driver(setMovingDirectionChannel, stopChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 	<-initIsFinished
 	elevator = <-initialElevatorStateChannel
@@ -52,12 +57,15 @@ func main() {
 	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel)
 
 	for {
+		StatusChannel <- "In main select: "
 		select {
 		case buttonPushed := <-addToRequestsChannel:
+			StatusChannel <- "	addToRequestsChannel, "
 			setButtonLightChannel <- buttonPushed
 			switch elevator.State {
 
 			case State_Idle:
+				StatusChannel <- "		State: Idle\n"
 				if elevator.CurrentFloor != buttonPushed.Floor {
 					elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
 					direction := buttonPushed.Floor - elevator.CurrentFloor
@@ -66,7 +74,7 @@ func main() {
 					} else if direction < 0 {
 						direction = int(Down)
 					} else {
-						errorChannel <- "In buttonPushed->State_Idle: Direction is zero"
+						errorChannel <- "In buttonPushed-> State_Idle: Direction is zero"
 					}
 					setMovingDirectionChannel <- Dir(direction)
 					elevator.State = State_Moving
@@ -74,13 +82,15 @@ func main() {
 					updateElevatorInfoChannel <- elevator
 				}
 			case State_Moving:
+				StatusChannel <- "		State: Moving\n"
 				elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
 
 				updateElevatorInfoChannel <- elevator
 			}
 
 		case <-stop:
-			errorChannel <- "In stop"
+			StatusChannel <- "	stop"
+
 			stopChannel <- true
 			elevator.State = State_Idle
 			elevator = orderHandler.ClearAtCurrentFloor(elevator)
@@ -89,13 +99,15 @@ func main() {
 			updateElevatorInfoChannel <- elevator
 
 		case <-doorClosedChannel:
-			errorChannel <- "In doorClosedChannel"
+			StatusChannel <- "	doorClosedChannel"
 			elevator.Direction = orderHandler.Requests_chooseDirection(elevator)
 			setMovingDirectionChannel <- elevator.Direction
 
 			updateElevatorInfoChannel <- elevator
 
 		case arrivedAtFloor := <-arrivedAtFloorChannel:
+			StatusChannel <- "	arrivedAtFloorChannel"
+
 			// Stop if it should stop
 			previousFloor = elevator.CurrentFloor
 			elevator.CurrentFloor = arrivedAtFloor
