@@ -45,8 +45,8 @@ func main() {
 	updateElevatorInfoChannel <- elevator
 
 	//Running threads
-	go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel)
-	//go Master(elevator, externalOrderChannel, updateElevatorInfoChannel)
+	//go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel)
+	go Master(elevator, externalOrderChannel, updateElevatorInfoChannel)
 	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel)
 
 	for {
