@@ -12,6 +12,7 @@ import . "statusHandler"
 //import . "errorHandler"
 
 const PORT string = ":24541"
+const BROADCAST_IP string = "129.241.187.255"
 
 //func recieveUdpMessage(master bool, responseChannel chan source.Message, terminate chan bool, terminated chan int){
 func ReceiveUdpMessage(receivedUdpMessageChannel chan Message, localIP string) {
@@ -47,7 +48,7 @@ func ReceiveUdpMessage(receivedUdpMessageChannel chan Message, localIP string) {
 				_ = json.Unmarshal(buffer[:mlen], &recMsg)
 				//source.ErrorChannel <- err
 				//StatusChannel <- "	Received message"
-				if recMsg.MessageTo == localIP {
+				if recMsg.MessageTo == localIP || recMsg.MessageTo == BROADCAST_IP {
 					receivedUdpMessageChannel <- recMsg
 				}
 			}
@@ -126,14 +127,14 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 	slaveIsAliveChannel := make(chan Message, 1)
 
 	go ReceiveUdpMessage(receivedUdpMessageChannel, masterIP)
-	go slaveTracker(slaveIsAliveChannel)
+	go slaveTracker(slaveIsAliveChannel, masterIP, elevator)
 
 	for {
-		StatusChannel <- "In Master: "
+		//StatusChannel <- "In Master: "
 		select {
 
 		case receivedMessage := <-receivedUdpMessageChannel:
-			StatusChannel <- "	receivedUdpMessageChannel"
+			//StatusChannel <- "	receivedUdpMessageChannel"
 
 			slaveIsAliveChannel <- receivedMessage
 
@@ -143,7 +144,7 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 			} else if receivedMessage.ElevatorInfoUpdate {
 				StatusChannel <- "		ElevatorInfoUpdate, CurrentFloor = " + strconv.Itoa(receivedMessage.ElevatorInfo.CurrentFloor)
 			} else if receivedMessage.AcknowledgeMessage {
-				StatusChannel <- "		AcknowledgeMessage from Slave received"
+				//StatusChannel <- "		AcknowledgeMessage from Slave received"
 			}
 
 		case newExternalOrder := <-externalOrderChannel:
@@ -159,20 +160,17 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 			msgToSlave := Message{true, false, true, false, masterIP, bestElevatorIP, elevator, newExternalOrder}
 			SendUdpMessage(msgToSlave)
 
-		case <-After(200 * Millisecond):
-			slaveIP := "129.241.187.159"
+		case <-After(100 * Millisecond):
 
-			for i := 0; i < 1; i++ { //Iterate over all available slaves
-				statusMessageToSlave := Message{true, false, false, false, masterIP, slaveIP, elevator, ButtonInfo{0, 0, 0}}
-				SendUdpMessage(statusMessageToSlave)
-			}
-
+			statusMessageToSlave := Message{true, false, false, false, masterIP, BROADCAST_IP, elevator, ButtonInfo{0, 0, 0}}
+			SendUdpMessage(statusMessageToSlave)
+			//sendAliveMessageToSlavesChannel <- true
 		}
 
 	}
 }
 
-func slaveTracker(slaveIsAliveChannel chan Message) {
+func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator ElevatorInfo) {
 
 	slavesAliveMap := make(map[string]ElevatorInfo)
 	slaveWatchdogChannelsMap := make(map[string]chan bool)
@@ -201,7 +199,17 @@ func slaveTracker(slaveIsAliveChannel chan Message) {
 			StatusChannel <- "slaveTracker terminates slave with IP: " + slaveToBeTerminatedIP
 			delete(slavesAliveMap, slaveToBeTerminatedIP)
 			delete(slaveWatchdogChannelsMap, slaveToBeTerminatedIP)
+
+			/*
+				case <-sendAliveMessageToSlavesChannel:
+
+					for slaveIP, _ := range slavesAliveMap {
+						statusMessageToSlave := Message{true, false, false, false, masterIP, slaveIP, elevator, ButtonInfo{0, 0, 0}}
+						SendUdpMessage(statusMessageToSlave)
+					}
+			*/
 		}
+
 	}
 }
 
@@ -212,7 +220,7 @@ func slaveWatchdog(slaveIP string, slaveIsAliveChannel chan bool, terminateSlave
 		case <-slaveIsAliveChannel:
 			break
 
-		case <-After(100 * Millisecond):
+		case <-After(500 * Millisecond):
 			terminateSlaveChannel <- slaveIP
 			StatusChannel <- "slaveWatchdog timed out, slaveWatchdog thread terminated"
 			return
