@@ -4,8 +4,7 @@ import "driver"
 import . "elevator_type"
 import "errorHandler"
 import "orderHandler"
-
-//import "network"
+import "network"
 
 //import "fmt"
 
@@ -34,12 +33,21 @@ func main() {
 	initialElevatorStateChannel := make(chan ElevatorInfo, 1)
 	doorClosedChannel := make(chan bool, 1)
 
+	//network channels
+	externalOrderChannel := make(chan ButtonInfo, 1)
+	updateElevatorInfoChannel := make(chan ElevatorInfo, 1)
+
+	//init
 	go errorHandler.Error_handler(errorChannel)
 	go driver.Driver(setMovingDirectionChannel, stopChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 	<-initIsFinished
 	elevator = <-initialElevatorStateChannel
+	updateElevatorInfoChannel <- elevator
 
-	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel)
+	//Running threads
+	go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel)
+	//go Master(elevator, externalOrderChannel, updateElevatorInfoChannel)
+	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel)
 
 	for {
 		select {
@@ -62,9 +70,13 @@ func main() {
 					}
 					setMovingDirectionChannel <- Dir(direction)
 					elevator.State = State_Moving
+
+					updateElevatorInfoChannel <- elevator
 				}
 			case State_Moving:
 				elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
+
+				updateElevatorInfoChannel <- elevator
 			}
 
 		case <-stop:
@@ -74,10 +86,14 @@ func main() {
 			elevator = orderHandler.ClearAtCurrentFloor(elevator)
 			clearButtonLightsAtFloorChannel <- elevator.CurrentFloor
 
+			updateElevatorInfoChannel <- elevator
+
 		case <-doorClosedChannel:
 			errorChannel <- "In doorClosedChannel"
 			elevator.Direction = orderHandler.Requests_chooseDirection(elevator)
 			setMovingDirectionChannel <- elevator.Direction
+
+			updateElevatorInfoChannel <- elevator
 
 		case arrivedAtFloor := <-arrivedAtFloorChannel:
 			// Stop if it should stop
@@ -103,6 +119,8 @@ func main() {
 				errorChannel <- "SHOULD STOP"
 				stop <- true
 			}
+
+			updateElevatorInfoChannel <- elevator
 
 		}
 

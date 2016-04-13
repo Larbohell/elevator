@@ -26,7 +26,7 @@ type ElevatorInfo struct {
 	State        ElevatorState
 }
 
-type Button int
+type Button int // Should be ButtonType
 
 const (
 	BUTTON_OUTSIDE_UP     Button = 0
@@ -35,13 +35,16 @@ const (
 )
 
 type ButtonInfo struct {
-	Button Button
+	Button Button //should be named ButtonType Button
 	Floor  int
 	Value  int
 }
 
 type Message struct {
-	FromMaster   bool
+	FromMaster         bool
+	NewOrder           bool
+	ElevatorInfoUpdate bool
+
 	ElevatorInfo ElevatorInfo
-	ButtonInfo   int
+	ButtonInfo   ButtonInfo
 }

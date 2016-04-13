@@ -32,6 +32,7 @@ func Requests_clearAtCurrentFloor(elevator ElevatorInfo) ElevatorInfo {
 	for btn := 0; btn < N_BUTTONS; btn++ {
 		elevator.Requests[elevator.CurrentFloor][btn] = 0
 	}
+
 	return elevator
 }
 
