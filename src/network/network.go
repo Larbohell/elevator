@@ -5,7 +5,9 @@ import . "elevator_type"
 
 import . "time"
 import "encoding/json"
+
 import "strconv"
+
 import "orderHandler"
 import . "statusHandler"
 
@@ -102,7 +104,6 @@ func Slave(elevator ElevatorInfo, slaveIP string, externalOrderChannel chan Butt
 			SendUdpMessage(msgToMaster)
 
 		case messageFromMaster := <-receivedUdpMessageChannel:
-			StatusChannel <- "	receivedUdpMessageChannel"
 			if messageFromMaster.FromMaster {
 
 				masterIP = messageFromMaster.MessageFrom
@@ -125,17 +126,28 @@ func Slave(elevator ElevatorInfo, slaveIP string, externalOrderChannel chan Butt
 func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo) {
 	receivedUdpMessageChannel := make(chan Message, 1)
 	slaveIsAliveChannel := make(chan Message, 1)
+	findBestElevatorForTheJobChannel := make(chan ButtonInfo, 1)
+	slavesAliveMapIsChangedChannel := make(chan map[string]ElevatorInfo)
+	thisIsTheBestElevatorChannel := make(chan string)
+	masterElevatorInfoChannel := make(chan ElevatorInfo, 1)
 
 	go ReceiveUdpMessage(receivedUdpMessageChannel, masterIP)
-	go slaveTracker(slaveIsAliveChannel, masterIP, elevator)
+	go slaveTracker(slaveIsAliveChannel, masterIP, elevator, slavesAliveMapIsChangedChannel)
+	go orderHandler.BestElevatorForTheJob(findBestElevatorForTheJobChannel, slavesAliveMapIsChangedChannel, thisIsTheBestElevatorChannel, masterElevatorInfoChannel, masterIP)
 
 	for {
 		//StatusChannel <- "In Master: "
+
 		select {
+		case updatedMasterElevatorInfo := <-updateElevatorInfoChannel:
+			masterElevatorInfoChannel <- updatedMasterElevatorInfo
 
 		case receivedMessage := <-receivedUdpMessageChannel:
-			//StatusChannel <- "	receivedUdpMessageChannel"
+			if receivedMessage.MessageFrom == masterIP {
+				break
+			}
 
+			//StatusChannel <- "Received message from IP: " + receivedMessage.MessageFrom
 			slaveIsAliveChannel <- receivedMessage
 
 			if receivedMessage.NewOrder {
@@ -149,7 +161,10 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 
 		case newExternalOrder := <-externalOrderChannel:
 			StatusChannel <- "	externalOrderChannel"
-			bestElevatorIP := orderHandler.BestElevatorForTheJob(newExternalOrder)
+
+			findBestElevatorForTheJobChannel <- newExternalOrder
+			bestElevatorIP := <-thisIsTheBestElevatorChannel
+
 			StatusChannel <- "		bestElevatorIP = " + bestElevatorIP
 			if bestElevatorIP == masterIP {
 				StatusChannel <- "			bestElevatorIP == masterIP"
@@ -165,12 +180,13 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 			statusMessageToSlave := Message{true, false, false, false, masterIP, BROADCAST_IP, elevator, ButtonInfo{0, 0, 0}}
 			SendUdpMessage(statusMessageToSlave)
 			//sendAliveMessageToSlavesChannel <- true
+
 		}
 
 	}
 }
 
-func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator ElevatorInfo) {
+func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator ElevatorInfo, slavesAliveMapIsChangedChannel chan map[string]ElevatorInfo) {
 
 	slavesAliveMap := make(map[string]ElevatorInfo)
 	slaveWatchdogChannelsMap := make(map[string]chan bool)
@@ -188,6 +204,7 @@ func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator El
 
 				slaveWatchdogChannelsMap[aliveMessage.MessageFrom] = newWatchdogChannel
 				slavesAliveMap[aliveMessage.MessageFrom] = aliveMessage.ElevatorInfo
+				slavesAliveMapIsChangedChannel <- slavesAliveMap
 				StatusChannel <- "New slave was added in list of slaves"
 
 				go slaveWatchdog(aliveMessage.MessageFrom, slaveWatchdogChannelsMap[aliveMessage.MessageFrom], terminateSlaveChannel)
@@ -199,6 +216,7 @@ func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator El
 			StatusChannel <- "slaveTracker terminates slave with IP: " + slaveToBeTerminatedIP
 			delete(slavesAliveMap, slaveToBeTerminatedIP)
 			delete(slaveWatchdogChannelsMap, slaveToBeTerminatedIP)
+			slavesAliveMapIsChangedChannel <- slavesAliveMap
 
 			/*
 				case <-sendAliveMessageToSlavesChannel:

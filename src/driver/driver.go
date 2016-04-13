@@ -3,7 +3,9 @@ package driver
 import . "elevator_type"
 import . "time"
 
-//import . "strconv"
+import . "statusHandler"
+
+import "strconv"
 
 // Make all driver funcs except Driver() lowercase
 
@@ -70,32 +72,12 @@ func Driver(setMovingDirectionChannel chan Dir, stopChannel chan bool, setButton
 
 		case movingDirection := <-setMovingDirectionChannel:
 			Elevator_set_motor_direction(Motor_direction(movingDirection))
-			/*
-				for {
-					errorChannel <- "3"
-					Sleep(10 * Millisecond)
-					select {
-
-					case stopValue := <-stopChannel:
-						errorChannel <- "2"
-						stopChannel <- stopValue
-
-					default:
-						Elevator_set_motor_direction(Motor_direction(movingDirection))
-						break
-					}
-				}
-			*/
 
 		case <-stopChannel:
-			//stopChannel <- stopValue
 			Elevator_set_motor_direction(MOTOR_DIRECTION_STOP)
-			//floor := <-floorSensorChannel
-			//floorSensorChannel <- floor
-			//clearButtonLightsAtFloor(floor)
+
 			Elevator_set_door_open_lamp(1)
 			<-After(3 * Second)
-			//<-stopChannel
 			Elevator_set_door_open_lamp(0)
 			doorClosedChannel <- true
 
@@ -111,6 +93,7 @@ func Driver(setMovingDirectionChannel chan Dir, stopChannel chan bool, setButton
 			if floor != -1 {
 				Elevator_set_floor_indicator(floor)
 				arrivedAtFloorChannel <- floor
+				StatusChannel <- "Floor: " + strconv.Itoa(floor)
 			}
 		}
 	}

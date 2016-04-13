@@ -3,6 +3,10 @@ package orderHandler
 import . "elevator_type"
 import . "statusHandler"
 
+import "strconv"
+
+//import "math"
+
 func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan ButtonInfo, addToRequestsChannel chan ButtonInfo, externalOrderChannel chan ButtonInfo) {
 	StatusChannel <- "In OrderHandler"
 
@@ -10,7 +14,7 @@ func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan Butto
 		select {
 		case addOrder := <-addOrderChannel:
 			if addOrder.Button == BUTTON_INSIDE_COMMAND {
-				StatusChannel <- "	Button pushed = INSIDE_COMMAND"
+				StatusChannel <- "	Button pushed = INTERNAL"
 				addToRequestsChannel <- addOrder
 			} else {
 				// Inform master, master handles order and adds to one of the elevator's queues
@@ -21,6 +25,47 @@ func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan Butto
 	}
 }
 
-func BestElevatorForTheJob(button ButtonInfo) string {
-	return "129.241.187.159"
+func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, slavesAliveMapIsChangedChannel chan map[string]ElevatorInfo, thisIsTheBestElevatorChannel chan string, masterElevatorInfoChannel chan ElevatorInfo, masterIP string) string {
+	elevatorsAliveMap := make(map[string]ElevatorInfo)
+
+	var masterElevatorInfo ElevatorInfo
+
+	for {
+		select {
+		case buttonInfo := <-findBestElevatorForTheJobChannel:
+			//CAlculate
+			minValue := N_FLOORS
+			var elevatorIP string
+			for slaveIP, elevator := range elevatorsAliveMap {
+
+				distance := elevator.CurrentFloor - buttonInfo.Floor
+				// Jallaabs
+				if distance < 0 {
+					distance = distance * -1
+				}
+				if distance < minValue {
+					minValue = distance
+					elevatorIP = slaveIP
+				}
+			}
+			if minValue == N_FLOORS {
+				StatusChannel <- "ERROR: No elevator is best for the job"
+			}
+			StatusChannel <- "Best IP for the job: " + elevatorIP
+			StatusChannel <- "This elevator's distance to the requested floor is " + strconv.Itoa(minValue)
+			/*
+				StatusChannel <- strconv.Itoa(len(slavesAliveMap))
+				StatusChannel <- "Button pushed in floor: " + strconv.Itoa(buttonInfo.Floor)
+				elevatorIP := "129.241.187.159"
+			*/
+			thisIsTheBestElevatorChannel <- elevatorIP
+
+		case elevatorsAliveMap = <-slavesAliveMapIsChangedChannel:
+			elevatorsAliveMap[masterIP] = masterElevatorInfo
+
+		case masterElevatorInfo = <-masterElevatorInfoChannel:
+			elevatorsAliveMap[masterIP] = masterElevatorInfo
+
+		}
+	}
 }
