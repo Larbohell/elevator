@@ -35,8 +35,8 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 		case buttonInfo := <-findBestElevatorForTheJobChannel:
 			//CAlculate
 			minValue := N_FLOORS
-			var elevatorIP string
-			for slaveIP, elevator := range elevatorsAliveMap {
+			var bestElevatorIP string
+			for elevatorIP, elevator := range elevatorsAliveMap {
 
 				distance := elevator.CurrentFloor - buttonInfo.Floor
 				// Jallaabs
@@ -45,20 +45,20 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 				}
 				if distance < minValue {
 					minValue = distance
-					elevatorIP = slaveIP
+					bestElevatorIP = elevatorIP
 				}
 			}
 			if minValue == N_FLOORS {
 				StatusChannel <- "ERROR: No elevator is best for the job"
 			}
-			StatusChannel <- "Best IP for the job: " + elevatorIP
+			StatusChannel <- "Best IP for the job: " + bestElevatorIP
 			StatusChannel <- "This elevator's distance to the requested floor is " + strconv.Itoa(minValue)
 			/*
 				StatusChannel <- strconv.Itoa(len(slavesAliveMap))
 				StatusChannel <- "Button pushed in floor: " + strconv.Itoa(buttonInfo.Floor)
 				elevatorIP := "129.241.187.159"
 			*/
-			thisIsTheBestElevatorChannel <- elevatorIP
+			thisIsTheBestElevatorChannel <- bestElevatorIP
 
 		case elevatorsAliveMap = <-slavesAliveMapIsChangedChannel:
 			elevatorsAliveMap[masterIP] = masterElevatorInfo
