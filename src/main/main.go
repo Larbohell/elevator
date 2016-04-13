@@ -8,7 +8,7 @@ import "network"
 
 //import "fmt"
 
-//import . "strconv"
+//import "strconv"
 
 //"129.241.187.156" = workspace 9
 //"129.24.187.159" = workspace 11
@@ -16,7 +16,7 @@ import "network"
 
 func main() {
 
-	const localIP string = "129.241.187.159" //workspace 11
+	const localIP string = "129.241.187.152" //workspace 11
 
 	var elevator ElevatorInfo
 	previousFloor := N_FLOORS + 1 // Impossible floor
@@ -83,6 +83,7 @@ func main() {
 					updateElevatorInfoChannel <- elevator
 				} else {
 					StatusChannel <- "			Elevator Idle in same floor as button pushed"
+					//stop <- true
 				}
 
 			case State_Moving:

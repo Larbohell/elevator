@@ -80,7 +80,7 @@ func Slave(elevator ElevatorInfo, slaveIP string, externalOrderChannel chan Butt
 
 	//var MasterIP string
 	//MasterIP := "129.241.187.156"
-	MasterIP := "0"
+	masterIP := "0"
 
 	for {
 		StatusChannel <- "In Slave: "
@@ -89,26 +89,28 @@ func Slave(elevator ElevatorInfo, slaveIP string, externalOrderChannel chan Butt
 		case newExternalOrder := <-externalOrderChannel:
 			StatusChannel <- "	externalOrderChannel"
 
-			msgToMaster := Message{false, false, true, false, slaveIP, MasterIP, elevator, newExternalOrder}
+			msgToMaster := Message{false, false, true, false, slaveIP, masterIP, elevator, newExternalOrder}
 			SendUdpMessage(msgToMaster)
 
 		case elevator = <-updateElevatorInfoChannel:
 			StatusChannel <- "	updateElevatorInfoChannel"
-			if MasterIP == "0" {
+			if masterIP == "0" {
 				break
 			}
-			msgToMaster := Message{FromMaster: false, AcknowledgeMessage: false, NewOrder: false, ElevatorInfoUpdate: true, MessageTo: MasterIP, MessageFrom: slaveIP, ElevatorInfo: elevator, ButtonInfo: ButtonInfo{0, 0, 0}}
+			msgToMaster := Message{FromMaster: false, AcknowledgeMessage: false, NewOrder: false, ElevatorInfoUpdate: true, MessageTo: masterIP, MessageFrom: slaveIP, ElevatorInfo: elevator, ButtonInfo: ButtonInfo{0, 0, 0}}
 			SendUdpMessage(msgToMaster)
 
 		case messageFromMaster := <-receivedUdpMessageChannel:
 			StatusChannel <- "	receivedUdpMessageChannel"
 			if messageFromMaster.FromMaster {
 
-				msgToMaster := Message{FromMaster: false, AcknowledgeMessage: true, NewOrder: false, ElevatorInfoUpdate: false, MessageTo: MasterIP, MessageFrom: slaveIP, ElevatorInfo: elevator, ButtonInfo: ButtonInfo{0, 0, 0}}
+				masterIP = messageFromMaster.MessageFrom
+				StatusChannel <- "		Updated masterIP = " + masterIP
+
+				msgToMaster := Message{FromMaster: false, AcknowledgeMessage: true, NewOrder: false, ElevatorInfoUpdate: false, MessageTo: masterIP, MessageFrom: slaveIP, ElevatorInfo: elevator, ButtonInfo: ButtonInfo{0, 0, 0}}
 				SendUdpMessage(msgToMaster)
 
-				MasterIP = messageFromMaster.MessageFrom
-				StatusChannel <- "		Updated masterIP = " + MasterIP
+				StatusChannel <- "		AcknowledgeMessage sent to master"
 
 				if messageFromMaster.NewOrder {
 					StatusChannel <- "		NewOrder"
@@ -121,7 +123,10 @@ func Slave(elevator ElevatorInfo, slaveIP string, externalOrderChannel chan Butt
 
 func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo) {
 	receivedUdpMessageChannel := make(chan Message, 1)
+	slaveIsAliveChannel := make(chan Message, 1)
+
 	go ReceiveUdpMessage(receivedUdpMessageChannel, masterIP)
+	go slaveTracker(slaveIsAliveChannel)
 
 	for {
 		StatusChannel <- "In Master: "
@@ -129,11 +134,16 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 
 		case receivedMessage := <-receivedUdpMessageChannel:
 			StatusChannel <- "	receivedUdpMessageChannel"
+
+			slaveIsAliveChannel <- receivedMessage
+
 			if receivedMessage.NewOrder {
 				StatusChannel <- "		NewOrder"
 				externalOrderChannel <- receivedMessage.ButtonInfo
 			} else if receivedMessage.ElevatorInfoUpdate {
 				StatusChannel <- "		ElevatorInfoUpdate, CurrentFloor = " + strconv.Itoa(receivedMessage.ElevatorInfo.CurrentFloor)
+			} else if receivedMessage.AcknowledgeMessage {
+				StatusChannel <- "		AcknowledgeMessage from Slave received"
 			}
 
 		case newExternalOrder := <-externalOrderChannel:
@@ -149,7 +159,7 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 			msgToSlave := Message{true, false, true, false, masterIP, bestElevatorIP, elevator, newExternalOrder}
 			SendUdpMessage(msgToSlave)
 
-		case <-After(10 * Millisecond):
+		case <-After(200 * Millisecond):
 			slaveIP := "129.241.187.159"
 
 			for i := 0; i < 1; i++ { //Iterate over all available slaves
@@ -159,5 +169,53 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 
 		}
 
+	}
+}
+
+func slaveTracker(slaveIsAliveChannel chan Message) {
+
+	slavesAliveMap := make(map[string]ElevatorInfo)
+	slaveWatchdogChannelsMap := make(map[string]chan bool)
+
+	terminateSlaveChannel := make(chan string)
+
+	for {
+		select {
+		case aliveMessage := <-slaveIsAliveChannel:
+			_, IPexsistsInSlavesAliveMap := slavesAliveMap[aliveMessage.MessageFrom]
+
+			if !IPexsistsInSlavesAliveMap {
+
+				newWatchdogChannel := make(chan bool, 1)
+
+				slaveWatchdogChannelsMap[aliveMessage.MessageFrom] = newWatchdogChannel
+				slavesAliveMap[aliveMessage.MessageFrom] = aliveMessage.ElevatorInfo
+				StatusChannel <- "New slave was added in list of slaves"
+
+				go slaveWatchdog(aliveMessage.MessageFrom, slaveWatchdogChannelsMap[aliveMessage.MessageFrom], terminateSlaveChannel)
+			} else {
+				slaveWatchdogChannelsMap[aliveMessage.MessageFrom] <- true
+			}
+
+		case slaveToBeTerminatedIP := <-terminateSlaveChannel:
+			StatusChannel <- "slaveTracker terminates slave with IP: " + slaveToBeTerminatedIP
+			delete(slavesAliveMap, slaveToBeTerminatedIP)
+			delete(slaveWatchdogChannelsMap, slaveToBeTerminatedIP)
+		}
+	}
+}
+
+func slaveWatchdog(slaveIP string, slaveIsAliveChannel chan bool, terminateSlaveChannel chan string) {
+	StatusChannel <- "slaveWatchdog thread created"
+	for {
+		select {
+		case <-slaveIsAliveChannel:
+			break
+
+		case <-After(100 * Millisecond):
+			terminateSlaveChannel <- slaveIP
+			StatusChannel <- "slaveWatchdog timed out, slaveWatchdog thread terminated"
+			return
+		}
 	}
 }
