@@ -55,7 +55,7 @@ func elevator_init(floorSensorChannel chan int, errorChannel chan string, initia
 	initialElevatorStateChannel <- elevator
 }
 
-func Driver(setMovingDirectionChannel chan Dir, stopChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, initIsFinished chan bool, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool) {
+func Driver(setMovingDirectionChannel chan Dir, stopChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, initIsFinished chan bool, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
 	floorSensorChannel := make(chan int, 1)
 
 	go read_floor_sensor(floorSensorChannel)
@@ -101,6 +101,11 @@ func Driver(setMovingDirectionChannel chan Dir, stopChannel chan bool, setButton
 
 		case buttonInfo := <-setButtonLightChannel:
 			Elevator_set_button_lamp(buttonInfo.Button, buttonInfo.Floor, buttonInfo.Value)
+
+		case floor := <-clearButtonLightsAtFloorChannel:
+			for btn := 0; btn < N_BUTTONS; btn++ {
+				Elevator_set_button_lamp(Button(btn), floor, 0)
+			}
 
 		case floor := <-floorSensorChannel:
 			if floor != -1 {

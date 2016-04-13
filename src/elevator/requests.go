@@ -1,41 +1,44 @@
 package elevator
-import "driver"
-import "elevator_type"
 
-func Requests_shouldStop(elevator elevator_type.Elevator) bool {
+import "driver"
+import . "elevator_type"
+import . "errorHandler"
+
+func Requests_shouldStop(elevator ElevatorInfo) bool {
 	// Returns true if anyone wants off or on (in the Direction of travel), or if a request
 	// has been cleared while the elevator was on its way
 
-	switch (elevator.Dir){
-	case elevator_type.Down:
-		if elevator.Requests[elevator.Floor][driver.BUTTON_OUTSIDE_DOWN] == 1 ||
-		elevator.Requests[elevator.Floor][driver.BUTTON_INSIDE_COMMAND] == 1|| 
-		!Requests_below(elevator){
+	switch elevator.Direction {
+	case Down:
+		if elevator.Requests[elevator.CurrentFloor][driver.BUTTON_OUTSIDE_DOWN] == 1 ||
+			elevator.Requests[elevator.CurrentFloor][driver.BUTTON_INSIDE_COMMAND] == 1 ||
+			!Requests_below(elevator) {
 			return true
 		}
-	case elevator_type.Up:
-		if elevator.Requests[elevator.Floor][driver.BUTTON_OUTSIDE_UP] == 1||
-		elevator.Requests[elevator.Floor][driver.BUTTON_INSIDE_COMMAND] == 1|| 
-		!Requests_above(elevator){
+	case Up:
+		if elevator.Requests[elevator.CurrentFloor][driver.BUTTON_OUTSIDE_UP] == 1 ||
+			elevator.Requests[elevator.CurrentFloor][driver.BUTTON_INSIDE_COMMAND] == 1 ||
+			!Requests_above(elevator) {
 			return true
 		}
-	case elevator_type.Stop:
+	case Stop:
+		errorChannel <- "Function 'Requests_shouldStop': Elevator.Direction is already 'Stop'."
 		return true
 	}
 	return false
 }
 
-func Requests_clearAtCurrentFloor(elevator elevator_type.Elevator) elevator_type.Elevator{
-	for btn := 0; btn < elevator_type.N_BUTTONS; btn++{
-		elevator.Requests[elevator.Floor][btn] = 0
+func Requests_clearAtCurrentFloor(elevator ElevatorInfo) ElevatorInfo {
+	for btn := 0; btn < N_BUTTONS; btn++ {
+		elevator.Requests[elevator.CurrentFloor][btn] = 0
 	}
 	return elevator
 }
 
-func Requests_above(elevator elevator_type.Elevator) bool {
-	for Floor := elevator.Floor + 1; Floor < elevator_type.N_FLOORS; Floor++{
-		for button := 0; button < elevator_type.N_BUTTONS; button++{
-			if elevator.Requests[Floor][button] == 1{
+func Requests_above(elevator ElevatorInfo) bool {
+	for floor := elevator.CurrentFloor + 1; floor < N_FLOORS; floor++ {
+		for button := 0; button < N_BUTTONS; button++ {
+			if elevator.Requests[floor][button] == 1 {
 				return true
 			}
 		}
@@ -43,10 +46,10 @@ func Requests_above(elevator elevator_type.Elevator) bool {
 	return false
 }
 
-func Requests_below(elevator elevator_type.Elevator) bool {
-	for Floor := 0; Floor < elevator.Floor; Floor++{
-		for button := 0; button < elevator_type.N_BUTTONS; button++{
-			if elevator.Requests[Floor][button] == 1{
+func Requests_below(elevator ElevatorInfo) bool {
+	for floor := 0; floor < elevator.CurrentFloor; floor++ {
+		for button := 0; button < N_BUTTONS; button++ {
+			if elevator.Requests[floor][button] == 1 {
 				return true
 			}
 		}
@@ -54,42 +57,37 @@ func Requests_below(elevator elevator_type.Elevator) bool {
 	return false
 }
 
-func nearest_request_Direction(elevator elevator_type.Elevator){
+func nearest_request_Direction(elevator ElevatorInfo) {
 
 }
 
-func Requests_chooseDirection(elevator elevator_type.Elevator) elevator_type.Dir {
-	switch(elevator.Dir){
-	case elevator_type.Up:
+func Requests_chooseDirection(elevator ElevatorInfo) Dir {
+	switch elevator.Direction {
+	case Up:
 		if Requests_above(elevator) {
-			return elevator_type.Up
+			return Up
 		} else if Requests_below(elevator) {
-			return elevator_type.Down
+			return Down
 		} else {
-			return elevator_type.Stop
+			return Stop
 		}
 
-	case elevator_type.Down:
+	case Down:
 		if Requests_below(elevator) {
-			return elevator_type.Down
+			return Down
 		} else if Requests_above(elevator) {
-			return elevator_type.Up
+			return Up
 		} else {
-			return elevator_type.Stop
+			return Stop
 		}
 
-	case elevator_type.Stop:
+	case Stop:
 		if Requests_below(elevator) {
-			return elevator_type.Down
+			return Down
 		} else if Requests_above(elevator) {
-			return elevator_type.Up
+			return Up
 		} else {
-			return elevator_type.Stop
+			return Stop
 		}
-		//return nearest_request_Direction()
 	}
-
-
-
-	return elevator_type.Up
 }

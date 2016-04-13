@@ -22,6 +22,8 @@ func main() {
 	setMovingDirectionChannel := make(chan Dir, 1)
 	stopChannel := make(chan bool, 1)
 	setButtonLightChannel := make(chan ButtonInfo, 1)
+	clearButtonLightsAtFloorChannel := make(chan int, 1)
+
 	newOrderChannel := make(chan ButtonInfo, 1)
 	removeOrderChannel := make(chan ButtonInfo, 1)
 	initIsFinished := make(chan bool)
@@ -33,7 +35,7 @@ func main() {
 	doorClosedChannel := make(chan bool, 1)
 
 	go errorHandler.Error_handler(errorChannel)
-	go driver.Driver(setMovingDirectionChannel, stopChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel)
+	go driver.Driver(setMovingDirectionChannel, stopChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 	<-initIsFinished
 	elevator = <-initialElevatorStateChannel
 
@@ -70,14 +72,12 @@ func main() {
 			stopChannel <- true
 			elevator.State = State_Idle
 			elevator = orderHandler.ClearAtCurrentFloor(elevator)
+			clearButtonLightsAtFloorChannel <- elevator.CurrentFloor
 
 		case <-doorClosedChannel:
 			errorChannel <- "In doorClosedChannel"
+			elevator.Direction = orderHandler.Requests_chooseDirection(elevator)
 			setMovingDirectionChannel <- elevator.Direction
-			/////////////////////////
-			// UNFINISHED BUSINESS //
-			// Direction is never changed to stop
-			/////////////////////////
 
 		case arrivedAtFloor := <-arrivedAtFloorChannel:
 			// Stop if it should stop
