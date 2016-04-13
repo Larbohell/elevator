@@ -12,6 +12,7 @@ import "network"
 
 //"129.241.187.156" = workspace 9
 //"129.24.187.159" = workspace 11
+//"129.24.187.152" = workspace 13
 
 func main() {
 
@@ -80,7 +81,10 @@ func main() {
 					elevator.State = State_Moving
 
 					updateElevatorInfoChannel <- elevator
+				} else {
+					StatusChannel <- "			Elevator Idle in same floor as button pushed"
 				}
+
 			case State_Moving:
 				StatusChannel <- "		State: Moving\n"
 				elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
@@ -128,7 +132,6 @@ func main() {
 			}
 
 			if orderHandler.ShouldStop(elevator) {
-				errorChannel <- "SHOULD STOP"
 				stop <- true
 			}
 

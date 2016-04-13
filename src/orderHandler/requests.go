@@ -1,7 +1,6 @@
 package orderHandler
 
 import "elevator_type"
-import . "fmt"
 
 func ShouldStop(elevator elevator_type.ElevatorInfo) bool {
 	// Returns true if anyone wants off or on (in the direction of travel), or if a request
@@ -12,18 +11,15 @@ func ShouldStop(elevator elevator_type.ElevatorInfo) bool {
 		if elevator.Requests[elevator.CurrentFloor][elevator_type.BUTTON_OUTSIDE_DOWN] == 1 ||
 			elevator.Requests[elevator.CurrentFloor][elevator_type.BUTTON_INSIDE_COMMAND] == 1 ||
 			!requests_below(elevator) {
-			Println("ShouldStop down returns true")
 			return true
 		}
 	case elevator_type.Up:
 		if elevator.Requests[elevator.CurrentFloor][elevator_type.BUTTON_OUTSIDE_UP] == 1 ||
 			elevator.Requests[elevator.CurrentFloor][elevator_type.BUTTON_INSIDE_COMMAND] == 1 ||
 			!requests_above(elevator) {
-			Println("In Up")
 			return true
 		}
 	case elevator_type.Stop:
-		Println("In stop")
 		return true
 	}
 	return false
@@ -56,12 +52,10 @@ func requests_below(elevator elevator_type.ElevatorInfo) bool {
 	for floor := 0; floor < elevator.CurrentFloor; floor++ {
 		for button := 0; button < elevator_type.N_BUTTONS; button++ {
 			if elevator.Requests[floor][button] == 1 {
-				Println("Requests below returns true")
 				return true
 			}
 		}
 	}
-	Println("Requests below returns false")
 	return false
 }
 

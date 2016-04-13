@@ -15,6 +15,7 @@ const PORT string = ":24541"
 
 //func recieveUdpMessage(master bool, responseChannel chan source.Message, terminate chan bool, terminated chan int){
 func ReceiveUdpMessage(receivedUdpMessageChannel chan Message, localIP string) {
+	StatusChannel <- "In ReceiveUdpMessage function"
 
 	buffer := make([]byte, 4098)
 	//raddr, err := net.ResolveUDPAddr("udp", ":26969")	// Master port
@@ -45,6 +46,7 @@ func ReceiveUdpMessage(receivedUdpMessageChannel chan Message, localIP string) {
 			if mlen > 0 {
 				_ = json.Unmarshal(buffer[:mlen], &recMsg)
 				//source.ErrorChannel <- err
+				//StatusChannel <- "	Received message"
 				if recMsg.MessageTo == localIP {
 					receivedUdpMessageChannel <- recMsg
 				}
@@ -56,9 +58,6 @@ func ReceiveUdpMessage(receivedUdpMessageChannel chan Message, localIP string) {
 func SendUdpMessage(msg Message) {
 
 	baddr, err := net.ResolveUDPAddr("udp", msg.MessageTo+PORT)
-	if msg.MessageTo == "allSlaves" {
-		baddr, err = net.ResolveUDPAddr("udp", "129.241.187.255"+PORT)
-	}
 
 	/*
 		if msg.FromMaster {
@@ -80,7 +79,8 @@ func Slave(elevator ElevatorInfo, slaveIP string, externalOrderChannel chan Butt
 	go ReceiveUdpMessage(receivedUdpMessageChannel, slaveIP)
 
 	//var MasterIP string
-	MasterIP := "129.241.187.156"
+	//MasterIP := "129.241.187.156"
+	MasterIP := "0"
 
 	for {
 		StatusChannel <- "In Slave: "
@@ -108,6 +108,7 @@ func Slave(elevator ElevatorInfo, slaveIP string, externalOrderChannel chan Butt
 				SendUdpMessage(msgToMaster)
 
 				MasterIP = messageFromMaster.MessageFrom
+				StatusChannel <- "		Updated masterIP = " + MasterIP
 
 				if messageFromMaster.NewOrder {
 					StatusChannel <- "		NewOrder"
@@ -149,9 +150,12 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 			SendUdpMessage(msgToSlave)
 
 		case <-After(10 * Millisecond):
-			StatusChannel <- "	Alive message to slaves sent from master"
-			statusMessageToSlave := Message{true, false, false, false, masterIP, "allSlaves", elevator, ButtonInfo{0, 0, 0}}
-			SendUdpMessage(statusMessageToSlave)
+			slaveIP := "129.241.187.159"
+
+			for i := 0; i < 1; i++ { //Iterate over all available slaves
+				statusMessageToSlave := Message{true, false, false, false, masterIP, slaveIP, elevator, ButtonInfo{0, 0, 0}}
+				SendUdpMessage(statusMessageToSlave)
+			}
 
 		}
 
