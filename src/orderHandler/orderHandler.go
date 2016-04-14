@@ -25,7 +25,7 @@ func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan Butto
 	}
 }
 
-func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, slavesAliveMapIsChangedChannel chan map[string]ElevatorInfo, thisIsTheBestElevatorChannel chan string, masterElevatorInfoChannel chan ElevatorInfo, masterIP string) string {
+func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, slavesAliveMapIsChangedChannel chan map[string]ElevatorInfo, thisIsTheBestElevatorChannel chan string, masterElevatorInfoChannel chan ElevatorInfo, masterIP string, terminateThreadChannel chan bool, threadIsTerminatedChannel chan bool) {
 	slavesAliveMap := make(map[string]ElevatorInfo)
 
 	var masterElevatorInfo ElevatorInfo
@@ -69,6 +69,12 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 
 		case masterElevatorInfo = <-masterElevatorInfoChannel:
 			break
+
+		case terminate := <-terminateThreadChannel:
+			terminateThreadChannel <- terminate
+			threadIsTerminatedChannel <- true
+			StatusChannel <- "BestElevatorForTheJob is terminated"
+			return
 			//elevatorsAliveMap[masterIP] = masterElevatorInfo
 
 		}
