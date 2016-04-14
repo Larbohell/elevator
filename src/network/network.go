@@ -17,8 +17,8 @@ const PORT string = ":24541"
 const BROADCAST_IP string = "129.241.187.255"
 
 //func recieveUdpMessage(master bool, responseChannel chan source.Message, terminate chan bool, terminated chan int){
-func ReceiveUdpMessage(receivedUdpMessageChannel chan Message, localIP string) {
-	StatusChannel <- "In ReceiveUdpMessage function"
+func ReceiveUdpMessage(receivedUdpMessageChannel chan Message, localIP string, terminateUdpReceiveThreadChannel chan bool, udpReceiveThreadIsTerminatedChannel chan bool) {
+	StatusChannel <- "In ReceiveUdpMessage function, localIP: " + localIP
 
 	buffer := make([]byte, 4098)
 	//raddr, err := net.ResolveUDPAddr("udp", ":26969")	// Master port
@@ -31,19 +31,17 @@ func ReceiveUdpMessage(receivedUdpMessageChannel chan Message, localIP string) {
 		}
 	*/
 	recievesock, _ := net.ListenUDP("udp", raddr)
-	//source.ErrorChannel <- err
 	var recMsg Message
 	for {
 		_ = recievesock.SetReadDeadline(Now().Add(50 * Millisecond))
-		//source.ErrorChannel <- err
 		select {
-		/*
-			case <- terminate:
-				err := recievesock.Close()
-				source.ErrorChannel <- err
-				terminated <- 1
-				return
-		*/
+
+		case <-terminateUdpReceiveThreadChannel:
+			recievesock.Close()
+			StatusChannel <- "Slave " + localIP + ": receiving socket closed and receivedUdpMessage thread shut down"
+			udpReceiveThreadIsTerminatedChannel <- true
+			return
+
 		default:
 			mlen, _, _ := recievesock.ReadFromUDP(buffer)
 			if mlen > 0 {
@@ -79,13 +77,17 @@ func SendUdpMessage(msg Message) {
 
 func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo) {
 	slaveIP := findLocalIPAddress()
-	StatusChannel <- "IP of slave is: " + slaveIP
-
-	receivedUdpMessageChannel := make(chan Message, 1)
-	go ReceiveUdpMessage(receivedUdpMessageChannel, slaveIP)
+	StatusChannel <- "Slave is alive with IP: " + slaveIP
 
 	messageFromMasterChannel := make(chan Message, 1)
 	masterIsDeadChannel := make(chan bool, 1)
+	receivedUdpMessageChannel := make(chan Message, 1)
+	terminateUdpReceiveThreadChannel := make(chan bool, 1)
+	udpReceiveThreadIsTerminatedChannel := make(chan bool, 1)
+
+	go ReceiveUdpMessage(receivedUdpMessageChannel, slaveIP, terminateUdpReceiveThreadChannel, udpReceiveThreadIsTerminatedChannel)
+	go messageFromMaster(receivedUdpMessageChannel, messageFromMasterChannel, masterIsDeadChannel)
+
 	//var MasterIP string
 	//MasterIP := "129.241.187.156"
 	masterIP := "0"
@@ -123,7 +125,11 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 			}
 
 		case <-masterIsDeadChannel:
+			terminateUdpReceiveThreadChannel <- true
+			<-udpReceiveThreadIsTerminatedChannel
+
 			go Master(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel)
+
 			return
 		}
 	}
@@ -146,7 +152,7 @@ func messageFromMaster(receivedUdpMessageChannel chan Message, messageFromMaster
 
 func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo) {
 	masterIP := findLocalIPAddress()
-	StatusChannel <- "IP of master is: " + masterIP
+	StatusChannel <- "Master is alive with IP: " + masterIP
 
 	receivedUdpMessageChannel := make(chan Message, 1)
 	slaveIsAliveChannel := make(chan Message, 1)
@@ -154,8 +160,10 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 	slavesAliveMapIsChangedChannel := make(chan map[string]ElevatorInfo)
 	thisIsTheBestElevatorChannel := make(chan string)
 	masterElevatorInfoChannel := make(chan ElevatorInfo, 1)
+	terminateUdpReceiveThreadChannel := make(chan bool, 1)
+	udpReceiveThreadIsTerminatedChannel := make(chan bool, 1)
 
-	go ReceiveUdpMessage(receivedUdpMessageChannel, masterIP)
+	go ReceiveUdpMessage(receivedUdpMessageChannel, masterIP, terminateUdpReceiveThreadChannel, udpReceiveThreadIsTerminatedChannel)
 	go slaveTracker(slaveIsAliveChannel, masterIP, elevator, slavesAliveMapIsChangedChannel)
 	go orderHandler.BestElevatorForTheJob(findBestElevatorForTheJobChannel, slavesAliveMapIsChangedChannel, thisIsTheBestElevatorChannel, masterElevatorInfoChannel, masterIP)
 
