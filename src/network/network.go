@@ -151,7 +151,7 @@ func messageFromMaster(receivedUdpMessageChannel chan Message, messageFromMaster
 				messageFromMasterChannel <- messageFromMaster
 			}
 
-		case <-After(Duration(200+rand.Intn(20)) * Millisecond):
+		case <-After(Duration(200+rand.Intn(20)*5) * Millisecond):
 			StatusChannel <- "Did not get messageFromMaster, timeout after " + strconv.Itoa(200+rand.Intn(20)) + "ms, shutting down slave"
 			masterIsDeadChannel <- true
 			return
