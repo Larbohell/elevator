@@ -11,6 +11,8 @@ import "strconv"
 import "orderHandler"
 import . "statusHandler"
 
+import "math/rand"
+
 //import . "errorHandler"
 
 const PORT string = ":24541"
@@ -85,6 +87,11 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 	terminateUdpReceiveThreadChannel := make(chan bool, 1)
 	udpReceiveThreadIsTerminatedChannel := make(chan bool, 1)
 
+	StatusChannel <- "Seed is: " + slaveIP[12:15]
+	seedNumber, _ := strconv.Atoi(slaveIP[12:15])
+	randomSeed := rand.NewSource(int64(seedNumber))
+	rand.New(randomSeed)
+
 	go ReceiveUdpMessage(receivedUdpMessageChannel, slaveIP, terminateUdpReceiveThreadChannel, udpReceiveThreadIsTerminatedChannel)
 	go messageFromMaster(receivedUdpMessageChannel, messageFromMasterChannel, masterIsDeadChannel)
 
@@ -144,8 +151,8 @@ func messageFromMaster(receivedUdpMessageChannel chan Message, messageFromMaster
 				messageFromMasterChannel <- messageFromMaster
 			}
 
-		case <-After(200 * Millisecond):
-			StatusChannel <- "Did not get messageFromMaster, shutting down slave"
+		case <-After(Duration(200+rand.Intn(20)) * Millisecond):
+			StatusChannel <- "Did not get messageFromMaster, timeout after " + strconv.Itoa(200+rand.Intn(20)) + "ms, shutting down slave"
 			masterIsDeadChannel <- true
 			return
 		}
