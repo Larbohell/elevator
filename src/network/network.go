@@ -140,10 +140,12 @@ func messageFromMaster(receivedUdpMessageChannel chan Message, messageFromMaster
 		select {
 		case messageFromMaster := <-receivedUdpMessageChannel:
 			if messageFromMaster.FromMaster {
+				StatusChannel <- "Got messageFromMaster"
 				messageFromMasterChannel <- messageFromMaster
 			}
 
 		case <-After(200 * Millisecond):
+			StatusChannel <- "Did not get messageFromMaster, shutting down slave"
 			masterIsDeadChannel <- true
 			return
 		}
@@ -227,20 +229,21 @@ func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator El
 	slaveWatchdogChannelsMap := make(map[string]chan bool)
 
 	terminateSlaveChannel := make(chan string)
+	StatusChannel <- "Number of slaves at the beginning: " + strconv.Itoa(len(slavesAliveMap))
 
 	for {
 		select {
 		case aliveMessage := <-slaveIsAliveChannel:
 			_, IPexsistsInSlavesAliveMap := slavesAliveMap[aliveMessage.MessageFrom]
+			//StatusChannel <- "slaveIsAliveChannel action from slave with IP " + aliveMessage.MessageFrom
 
 			if !IPexsistsInSlavesAliveMap {
 
 				newWatchdogChannel := make(chan bool, 1)
-
 				slaveWatchdogChannelsMap[aliveMessage.MessageFrom] = newWatchdogChannel
 				slavesAliveMap[aliveMessage.MessageFrom] = aliveMessage.ElevatorInfo
 				slavesAliveMapIsChangedChannel <- slavesAliveMap
-				StatusChannel <- "New slave was added in list of slaves"
+				StatusChannel <- "Slave with IP " + aliveMessage.MessageFrom + " was added to list of slaves, number of slaves is now: " + strconv.Itoa(len(slavesAliveMap))
 
 				go slaveWatchdog(aliveMessage.MessageFrom, slaveWatchdogChannelsMap[aliveMessage.MessageFrom], terminateSlaveChannel)
 			} else {
@@ -248,9 +251,10 @@ func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator El
 			}
 
 		case slaveToBeTerminatedIP := <-terminateSlaveChannel:
-			StatusChannel <- "slaveTracker terminates slave with IP: " + slaveToBeTerminatedIP
 			delete(slavesAliveMap, slaveToBeTerminatedIP)
 			delete(slaveWatchdogChannelsMap, slaveToBeTerminatedIP)
+			StatusChannel <- "slaveTracker terminates slave with IP: " + slaveToBeTerminatedIP + ", number of slaves: " + strconv.Itoa(len(slavesAliveMap))
+
 			slavesAliveMapIsChangedChannel <- slavesAliveMap
 
 			/*

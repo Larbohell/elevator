@@ -26,32 +26,35 @@ func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan Butto
 }
 
 func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, slavesAliveMapIsChangedChannel chan map[string]ElevatorInfo, thisIsTheBestElevatorChannel chan string, masterElevatorInfoChannel chan ElevatorInfo, masterIP string) string {
-	elevatorsAliveMap := make(map[string]ElevatorInfo)
+	slavesAliveMap := make(map[string]ElevatorInfo)
 
 	var masterElevatorInfo ElevatorInfo
 
 	for {
 		select {
 		case buttonInfo := <-findBestElevatorForTheJobChannel:
-			//CAlculate
+
 			minValue := N_FLOORS
 			var bestElevatorIP string
-			for elevatorIP, elevator := range elevatorsAliveMap {
 
-				///// COST FUNCTION /////
-				distance := elevator.CurrentFloor - buttonInfo.Floor
-				// Jallaabs
-				if distance < 0 {
-					distance = distance * -1
-				}
-				if distance < minValue {
-					minValue = distance
-					bestElevatorIP = elevatorIP
+			for slaveIP, elevator := range slavesAliveMap {
+				slaveCostValue := costFunction(elevator, buttonInfo)
+
+				if slaveCostValue < minValue {
+					minValue = slaveCostValue
+					bestElevatorIP = slaveIP
 				}
 			}
+			masterCostValue := costFunction(masterElevatorInfo, buttonInfo)
+			if masterCostValue < minValue {
+				minValue = masterCostValue
+				bestElevatorIP = masterIP
+			}
+
 			if minValue == N_FLOORS {
 				StatusChannel <- "ERROR: No elevator is best for the job"
 			}
+
 			StatusChannel <- "Best IP for the job: " + bestElevatorIP
 			StatusChannel <- "This elevator's distance to the requested floor is " + strconv.Itoa(minValue)
 			/*
@@ -61,12 +64,22 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 			*/
 			thisIsTheBestElevatorChannel <- bestElevatorIP
 
-		case elevatorsAliveMap = <-slavesAliveMapIsChangedChannel:
-			elevatorsAliveMap[masterIP] = masterElevatorInfo
+		case slavesAliveMap = <-slavesAliveMapIsChangedChannel:
+			break //update elevatorsAliveMap
 
 		case masterElevatorInfo = <-masterElevatorInfoChannel:
-			elevatorsAliveMap[masterIP] = masterElevatorInfo
+			break
+			//elevatorsAliveMap[masterIP] = masterElevatorInfo
 
 		}
 	}
+}
+
+func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
+	distance := elevator.CurrentFloor - buttonInfo.Floor
+	// JallaAbs()
+	if distance < 0 {
+		distance = distance * -1
+	}
+	return distance
 }
