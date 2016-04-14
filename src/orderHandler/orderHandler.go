@@ -38,6 +38,7 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 			var bestElevatorIP string
 			for elevatorIP, elevator := range elevatorsAliveMap {
 
+				///// COST FUNCTION /////
 				distance := elevator.CurrentFloor - buttonInfo.Floor
 				// Jallaabs
 				if distance < 0 {

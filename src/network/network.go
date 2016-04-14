@@ -77,10 +77,15 @@ func SendUdpMessage(msg Message) {
 	}
 }
 
-func Slave(elevator ElevatorInfo, slaveIP string, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo) {
+func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo) {
+	slaveIP := findLocalIPAddress()
+	StatusChannel <- "IP of slave is: " + slaveIP
+
 	receivedUdpMessageChannel := make(chan Message, 1)
 	go ReceiveUdpMessage(receivedUdpMessageChannel, slaveIP)
 
+	messageFromMasterChannel := make(chan Message, 1)
+	masterIsDeadChannel := make(chan bool, 1)
 	//var MasterIP string
 	//MasterIP := "129.241.187.156"
 	masterIP := "0"
@@ -103,27 +108,46 @@ func Slave(elevator ElevatorInfo, slaveIP string, externalOrderChannel chan Butt
 			msgToMaster := Message{FromMaster: false, AcknowledgeMessage: false, NewOrder: false, ElevatorInfoUpdate: true, MessageTo: masterIP, MessageFrom: slaveIP, ElevatorInfo: elevator, ButtonInfo: ButtonInfo{0, 0, 0}}
 			SendUdpMessage(msgToMaster)
 
-		case messageFromMaster := <-receivedUdpMessageChannel:
-			if messageFromMaster.FromMaster {
+		case messageFromMaster := <-messageFromMasterChannel:
+			masterIP = messageFromMaster.MessageFrom
+			StatusChannel <- "		Updated masterIP = " + masterIP
 
-				masterIP = messageFromMaster.MessageFrom
-				StatusChannel <- "		Updated masterIP = " + masterIP
+			msgToMaster := Message{FromMaster: false, AcknowledgeMessage: true, NewOrder: false, ElevatorInfoUpdate: false, MessageTo: masterIP, MessageFrom: slaveIP, ElevatorInfo: elevator, ButtonInfo: ButtonInfo{0, 0, 0}}
+			SendUdpMessage(msgToMaster)
 
-				msgToMaster := Message{FromMaster: false, AcknowledgeMessage: true, NewOrder: false, ElevatorInfoUpdate: false, MessageTo: masterIP, MessageFrom: slaveIP, ElevatorInfo: elevator, ButtonInfo: ButtonInfo{0, 0, 0}}
-				SendUdpMessage(msgToMaster)
+			StatusChannel <- "		AcknowledgeMessage sent to master"
 
-				StatusChannel <- "		AcknowledgeMessage sent to master"
-
-				if messageFromMaster.NewOrder {
-					StatusChannel <- "		NewOrder"
-					addToRequestsChannel <- messageFromMaster.ButtonInfo
-				}
+			if messageFromMaster.NewOrder {
+				StatusChannel <- "		NewOrder"
+				addToRequestsChannel <- messageFromMaster.ButtonInfo
 			}
+
+		case <-masterIsDeadChannel:
+			go Master(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel)
+			return
 		}
 	}
 }
 
-func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo) {
+func messageFromMaster(receivedUdpMessageChannel chan Message, messageFromMasterChannel chan Message, masterIsDeadChannel chan bool) {
+	for {
+		select {
+		case messageFromMaster := <-receivedUdpMessageChannel:
+			if messageFromMaster.FromMaster {
+				messageFromMasterChannel <- messageFromMaster
+			}
+
+		case <-After(200 * Millisecond):
+			masterIsDeadChannel <- true
+			return
+		}
+	}
+}
+
+func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo) {
+	masterIP := findLocalIPAddress()
+	StatusChannel <- "IP of master is: " + masterIP
+
 	receivedUdpMessageChannel := make(chan Message, 1)
 	slaveIsAliveChannel := make(chan Message, 1)
 	findBestElevatorForTheJobChannel := make(chan ButtonInfo, 1)
@@ -134,6 +158,9 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 	go ReceiveUdpMessage(receivedUdpMessageChannel, masterIP)
 	go slaveTracker(slaveIsAliveChannel, masterIP, elevator, slavesAliveMapIsChangedChannel)
 	go orderHandler.BestElevatorForTheJob(findBestElevatorForTheJobChannel, slavesAliveMapIsChangedChannel, thisIsTheBestElevatorChannel, masterElevatorInfoChannel, masterIP)
+
+	statusMessageToSlave := Message{true, false, false, false, masterIP, BROADCAST_IP, elevator, ButtonInfo{0, 0, 0}}
+	SendUdpMessage(statusMessageToSlave)
 
 	for {
 		//StatusChannel <- "In Master: "
@@ -177,7 +204,7 @@ func Master(elevator ElevatorInfo, masterIP string, externalOrderChannel chan Bu
 
 		case <-After(100 * Millisecond):
 
-			statusMessageToSlave := Message{true, false, false, false, masterIP, BROADCAST_IP, elevator, ButtonInfo{0, 0, 0}}
+			//statusMessageToSlave := Message{true, false, false, false, masterIP, BROADCAST_IP, elevator, ButtonInfo{0, 0, 0}}
 			SendUdpMessage(statusMessageToSlave)
 			//sendAliveMessageToSlavesChannel <- true
 
@@ -244,4 +271,27 @@ func slaveWatchdog(slaveIP string, slaveIsAliveChannel chan bool, terminateSlave
 			return
 		}
 	}
+}
+
+func findLocalIPAddress() string {
+	ifaces, _ := net.Interfaces()
+	var ip net.IP
+	// handle err
+	for _, i := range ifaces {
+		addrs, _ := i.Addrs()
+		// handle err
+		for _, addr := range addrs {
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+				if len(ip.String()) == 15 {
+					return ip.String()
+				}
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			// process IP address
+		}
+	}
+	return ip.String()
 }
