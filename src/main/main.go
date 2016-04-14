@@ -24,6 +24,7 @@ func main() {
 
 	var elevator ElevatorInfo
 	previousFloor := N_FLOORS + 1 // Impossible floor
+	var uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]int
 
 	setMovingDirectionChannel := make(chan Dir, 1)
 	stopChannel := make(chan bool, 1)
@@ -57,9 +58,9 @@ func main() {
 	updateElevatorInfoChannel <- elevator
 
 	//Running threads
-	go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel)
+	go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel, uncompletedExternalOrders)
 	//go network.Master(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel)
-	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel)
+	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel, uncompletedExternalOrders)
 
 	for {
 		StatusChannel <- "In main select: "
