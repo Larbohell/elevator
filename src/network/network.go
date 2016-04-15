@@ -225,14 +225,12 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 
 		select {
 		case updatedMasterElevatorInfo := <-updateElevatorInfoChannel:
-			StatusChannel <- "1"
 
 			masterElevatorInfoChannel <- updatedMasterElevatorInfo
 
 			SendUdpMessage(statusMessageToSlave)
 
 		case receivedMessage := <-receivedUdpMessageChannel:
-			StatusChannel <- "2"
 			if receivedMessage.MessageFrom == masterIP {
 				break
 			}
