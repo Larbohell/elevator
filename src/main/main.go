@@ -18,6 +18,9 @@ import "network"
 //"129.24.187.152" = workspace 13
 //"129.24.187.158" = workspace 10
 
+//TODO!!!
+//Open door when elevator idle and buttons pushed in same floor, and turn off lights 
+
 func main() {
 
 	//const localIP string = "129.241.187.156" //workspace 11
@@ -141,7 +144,6 @@ func main() {
 		case arrivedAtFloor := <-arrivedAtFloorChannel:
 			StatusChannel <- "	arrivedAtFloorChannel"
 
-			// Stop if it should stop
 			previousFloor = elevator.CurrentFloor
 			elevator.CurrentFloor = arrivedAtFloor
 
@@ -165,6 +167,7 @@ func main() {
 			}
 
 			updateElevatorInfoChannel <- elevator
+			
 
 		case uncompletedExternalOrders := <-uncompletedExternalOrdersMatrixChangedChannel: //change to updateExtLightsChannel
 
