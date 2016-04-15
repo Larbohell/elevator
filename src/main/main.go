@@ -23,8 +23,8 @@ func main() {
 	//const localIP string = "129.241.187.156" //workspace 11
 
 	var elevator ElevatorInfo
-	previousFloor := N_FLOORS + 1 // Impossible floor
-	var uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]int
+	previousFloor := N_FLOORS + 1                                 // Impossible floor
+	var uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string //Could be declared in Slave
 
 	setMovingDirectionChannel := make(chan Dir, 1)
 	stopChannel := make(chan bool, 1)
@@ -46,8 +46,10 @@ func main() {
 	doorClosedChannel := make(chan bool, 1)
 
 	//network channels
-	externalOrderChannel := make(chan ButtonInfo, 1)
+	orderCompletedByThisElevatorChannel := make(chan ButtonInfo, 1)
+	externalOrderChannel := make(chan ButtonInfo, N_FLOORS*2-2) //N_FLOORS*2-2 = number of external buttons
 	updateElevatorInfoChannel := make(chan ElevatorInfo, 1)
+	uncompletedExternalOrdersMatrixChangedChannel := make(chan [N_FLOORS][N_BUTTONS - 1]string, 1)
 
 	//init
 	go Error_handler(errorChannel)
@@ -58,9 +60,10 @@ func main() {
 	updateElevatorInfoChannel <- elevator
 
 	//Running threads
-	go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel, uncompletedExternalOrders)
+
+	go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel, uncompletedExternalOrders, orderCompletedByThisElevatorChannel, uncompletedExternalOrdersMatrixChangedChannel)
 	//go network.Master(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel)
-	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel, uncompletedExternalOrders)
+	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel)
 
 	for {
 		StatusChannel <- "In main select: "
@@ -104,7 +107,26 @@ func main() {
 
 			stopChannel <- true
 			elevator.State = State_Idle
+
+			if elevator.Requests[elevator.CurrentFloor][int(BUTTON_OUTSIDE_UP)] == 1 {
+				var button ButtonInfo
+				button.Button = BUTTON_OUTSIDE_UP
+				button.Floor = elevator.CurrentFloor
+				button.Value = 1
+
+				orderCompletedByThisElevatorChannel <- button
+			}
+			if elevator.Requests[elevator.CurrentFloor][int(BUTTON_OUTSIDE_DOWN)] == 1 {
+				var button ButtonInfo
+				button.Button = BUTTON_OUTSIDE_DOWN
+				button.Floor = elevator.CurrentFloor
+				button.Value = 1
+
+				orderCompletedByThisElevatorChannel <- button
+			}
+
 			elevator = orderHandler.ClearAtCurrentFloor(elevator)
+
 			clearButtonLightsAtFloorChannel <- elevator.CurrentFloor
 
 			updateElevatorInfoChannel <- elevator
@@ -144,7 +166,23 @@ func main() {
 
 			updateElevatorInfoChannel <- elevator
 
-		}
+		case uncompletedExternalOrders := <-uncompletedExternalOrdersMatrixChangedChannel: //change to updateExtLightsChannel
 
+			for floor := 0; floor < N_FLOORS; floor++ {
+				for btn := 0; btn < N_BUTTONS-1; btn++ {
+					var button ButtonInfo
+					button.Button = Button(btn)
+					button.Floor = floor
+
+					if uncompletedExternalOrders[floor][btn] == "" {
+						button.Value = 0
+					} else {
+						button.Value = 1
+					}
+
+					setButtonLightChannel <- button
+				}
+			}
+		}
 	}
 }

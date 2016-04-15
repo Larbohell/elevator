@@ -78,7 +78,7 @@ func SendUdpMessage(msg Message) {
 	}
 }
 
-func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo, uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]int) {
+func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo, uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string, orderCompletedByThisElevatorChannel chan ButtonInfo, uncompletedExternalOrdersMatrixChangedChannel chan [N_FLOORS][N_BUTTONS - 1]string) {
 	slaveIP := findLocalIPAddress()
 	StatusChannel <- "Slave is alive with IP: " + slaveIP
 
@@ -107,7 +107,7 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 		case newExternalOrder := <-externalOrderChannel:
 			StatusChannel <- "	externalOrderChannel"
 
-			msgToMaster := Message{false, false, true, false, slaveIP, masterIP, elevator, newExternalOrder}
+			msgToMaster := Message{false, false, true, false, false, slaveIP, masterIP, elevator, newExternalOrder, uncompletedExternalOrders}
 			SendUdpMessage(msgToMaster)
 
 		case elevator = <-updateElevatorInfoChannel:
@@ -115,30 +115,40 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 			if masterIP == "0" {
 				break
 			}
-			msgToMaster := Message{FromMaster: false, AcknowledgeMessage: false, NewOrder: false, ElevatorInfoUpdate: true, MessageTo: masterIP, MessageFrom: slaveIP, ElevatorInfo: elevator, ButtonInfo: ButtonInfo{0, 0, 0}}
+			msgToMaster := Message{false, false, false, false, true, masterIP, slaveIP, elevator, ButtonInfo{0, 0, 0}, uncompletedExternalOrders}
 			SendUdpMessage(msgToMaster)
 
 		case messageFromMaster := <-messageFromMasterChannel:
 			masterIP = messageFromMaster.MessageFrom
 			//StatusChannel <- "		Updated masterIP = " + masterIP
 
-			msgToMaster := Message{FromMaster: false, AcknowledgeMessage: true, NewOrder: false, ElevatorInfoUpdate: false, MessageTo: masterIP, MessageFrom: slaveIP, ElevatorInfo: elevator, ButtonInfo: ButtonInfo{0, 0, 0}}
+			msgToMaster := Message{false, true, false, false, false, masterIP, slaveIP, elevator, ButtonInfo{0, 0, 0}, uncompletedExternalOrders}
 			SendUdpMessage(msgToMaster)
 
 			//StatusChannel <- "		AcknowledgeMessage sent to master"
 
 			if messageFromMaster.NewOrder {
 				StatusChannel <- "		NewOrder"
-				addToRequestsChannel <- messageFromMaster.ButtonInfo
-			} else if messageFromMaster.UpdateUncompletedExternalOrders {
-				uncompletedExternalOrders = messageFromMaster.UncompletedExternalOrders
+				if messageFromMaster.MessageTo == slaveIP {
+					addToRequestsChannel <- messageFromMaster.ButtonInfo
+
+				} else if messageFromMaster.MessageTo == BROADCAST_IP {
+					uncompletedExternalOrders = messageFromMaster.UncompletedExternalOrders
+					uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders
+
+				}
+
 			}
+
+		case button := <-orderCompletedByThisElevatorChannel:
+			msgToMaster := Message{false, false, false, true, false, slaveIP, masterIP, elevator, button, uncompletedExternalOrders}
+			SendUdpMessage(msgToMaster)
 
 		case <-masterIsDeadChannel:
 			terminateUdpReceiveThreadChannel <- true
 			<-udpReceiveThreadIsTerminatedChannel
 
-			go Master(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel, uncompletedExternalOrders)
+			go Master(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel, uncompletedExternalOrders, orderCompletedByThisElevatorChannel, uncompletedExternalOrdersMatrixChangedChannel)
 
 			return
 		}
@@ -162,12 +172,18 @@ func messageFromMaster(receivedUdpMessageChannel chan Message, messageFromMaster
 	}
 }
 
-func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo, uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]int) {
+func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo, uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string, orderCompletedByThisElevatorChannel chan ButtonInfo, uncompletedExternalOrdersMatrixChangedChannel chan [N_FLOORS][N_BUTTONS - 1]string) {
 	masterIP := findLocalIPAddress()
 	StatusChannel <- "Master is alive with IP: " + masterIP
 
 	receivedUdpMessageChannel := make(chan Message, 1)
 	slaveIsAliveChannel := make(chan Message, 1)
+	externalOrderFromDeadSlaveChannel := make(chan ButtonInfo, 1)
+
+	slaveIsAliveIPChannel := make(chan string, 1) //Merge slaveIsAliveIPCHannel and slaveIsAliveCHannel
+
+	orderCompletedChannel := make(chan ButtonInfo, 1)
+
 	slavesAliveMapIsChangedChannel := make(chan map[string]ElevatorInfo)
 	findBestElevatorForTheJobChannel := make(chan ButtonInfo, 1)
 	thisIsTheBestElevatorChannel := make(chan string)
@@ -180,11 +196,25 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 	go orderHandler.BestElevatorForTheJob(findBestElevatorForTheJobChannel, slavesAliveMapIsChangedChannel, thisIsTheBestElevatorChannel, masterElevatorInfoChannel, masterIP, terminateThreadChannel, threadIsTerminatedChannel)
 	numberOfThreads := 3
 
-	statusMessageToSlave := Message{true, false, false, false, masterIP, BROADCAST_IP, elevator, ButtonInfo{0, 0, 0}}
+	statusMessageToSlave := Message{true, false, false, false, false, masterIP, BROADCAST_IP, elevator, ButtonInfo{0, 0, 0}, uncompletedExternalOrders}
 	SendUdpMessage(statusMessageToSlave)
 
 	// You may have been a slave in an earlier life, so:
 	// Iterate over unserved external order matrix, put all unserved orders in externalOrderChannel (buffered with N_FlOORS * 2 - 2 elements)
+
+	for floor := 0; floor < N_FLOORS; floor++ {
+		for btn := 0; btn < N_BUTTONS-1; btn++ {
+			if uncompletedExternalOrders[floor][btn] != "" {
+				var button ButtonInfo
+				button.Button = Button(btn)
+				button.Floor = floor
+				button.Value = 1
+
+				go orderWatchdog(uncompletedExternalOrders[floor][btn], button, slaveIsAliveIPChannel, externalOrderFromDeadSlaveChannel, orderCompletedChannel)
+
+			}
+		}
+	}
 
 	for {
 		//StatusChannel <- "In Master: "
@@ -202,6 +232,8 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 			//StatusChannel <- "Received message from IP: " + receivedMessage.MessageFrom
 			if !receivedMessage.FromMaster {
 				slaveIsAliveChannel <- receivedMessage
+				slaveIsAliveIPChannel <- receivedMessage.MessageFrom
+
 			} else {
 				myThreeLastNumbersOfIP, _ := strconv.Atoi(masterIP[12:15])
 				receivedThreeLastNumbersOfIP, _ := strconv.Atoi(receivedMessage.MessageFrom[12:15])
@@ -213,7 +245,7 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 						<-threadIsTerminatedChannel
 					}
 					<-terminateThreadChannel // emptying channel
-					go Slave(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel, uncompletedExternalOrders)
+					go Slave(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel, uncompletedExternalOrders, orderCompletedByThisElevatorChannel, uncompletedExternalOrdersMatrixChangedChannel)
 					return
 				}
 			}
@@ -221,12 +253,22 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 			if receivedMessage.NewOrder {
 				StatusChannel <- "		NewOrder"
 				externalOrderChannel <- receivedMessage.ButtonInfo
+
 			} else if receivedMessage.ElevatorInfoUpdate {
 				StatusChannel <- "		ElevatorInfoUpdate, CurrentFloor = " + strconv.Itoa(receivedMessage.ElevatorInfo.CurrentFloor)
+
 			} else if receivedMessage.AcknowledgeMessage {
 				//StatusChannel <- "		AcknowledgeMessage from Slave received"
+
 			} else if receivedMessage.OrderCompleted {
-				// Clears button lights in all slaves (and itself), and remove order from unserved external orders matrix
+				orderCompletedChannel <- receivedMessage.ButtonInfo
+				uncompletedExternalOrders[receivedMessage.ButtonInfo.Floor][receivedMessage.ButtonInfo.Button] = ""
+				msgToSlave := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, receivedMessage.ButtonInfo, uncompletedExternalOrders}
+				SendUdpMessage(msgToSlave)
+
+				uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders //Update own lights
+
+				// Clears button lights in all slaves (and itself), and remove order from unserved external orders matrix and kill orderWatchdog
 			}
 
 			SendUdpMessage(statusMessageToSlave)
@@ -236,19 +278,34 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 
 			findBestElevatorForTheJobChannel <- newExternalOrder
 			bestElevatorIP := <-thisIsTheBestElevatorChannel
-
 			StatusChannel <- "		bestElevatorIP = " + bestElevatorIP
+
+			// Create orderWatchdog thread, which monitors that order, times out if slave not alive for some time, and terminates if order is served
+			go orderWatchdog(bestElevatorIP, newExternalOrder, slaveIsAliveIPChannel, externalOrderFromDeadSlaveChannel, orderCompletedChannel)
+
 			if bestElevatorIP == masterIP {
 				StatusChannel <- "			bestElevatorIP == masterIP"
 				addToRequestsChannel <- newExternalOrder
-				break
+			} else {
+				//Order best slave to excecute order
+				StatusChannel <- "			bestElevatorIP = Slave"
+				msgToSlave := Message{true, false, true, false, false, masterIP, bestElevatorIP, elevator, newExternalOrder, uncompletedExternalOrders}
+				SendUdpMessage(msgToSlave)
 			}
-			StatusChannel <- "			bestElevatorIP = Slave"
-			msgToSlave := Message{true, false, true, false, masterIP, bestElevatorIP, elevator, newExternalOrder}
+
+			//Update uncompletedExternalOrders in all slaves
+
+			uncompletedExternalOrders[newExternalOrder.Floor][newExternalOrder.Button] = bestElevatorIP
+			msgToSlaves := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, newExternalOrder, uncompletedExternalOrders}
+			SendUdpMessage(msgToSlaves)
+
+		case button := <-orderCompletedByThisElevatorChannel:
+			orderCompletedChannel <- button
+			uncompletedExternalOrders[button.Floor][button.Button] = ""
+			msgToSlave := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, button, uncompletedExternalOrders}
 			SendUdpMessage(msgToSlave)
 
-			// Create orderWatchdog thread, which monitors that order, times out if slave not alive for some time, and terminates if order is served
-			// Update uncompletedExternalOrders matrix, and broadcast the matrix to all slaves
+			uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders //Update own lights
 
 		case oldExternalOrder := <-externalOrderFromDeadSlaveChannel:
 			externalOrderChannel <- oldExternalOrder
@@ -340,15 +397,21 @@ func slaveWatchdog(slaveIP string, slaveIsAliveChannel chan bool, terminateSlave
 	}
 }
 
-func orderWatchdog(slaveIP string, slaveIsAliveChannel chan bool, terminateSlaveChannel chan string, externalOrderFromDeadSlaveChannel chan ButtonInfo) {
+func orderWatchdog(slaveIP string, button ButtonInfo, slaveIsAliveIPChannel chan string, externalOrderFromDeadSlaveChannel chan ButtonInfo, orderCompletedChannel chan ButtonInfo) {
 	StatusChannel <- "slaveWatchdog thread created"
 	for {
 		select {
-		case <-slaveIsAliveChannel:
-			break
+		case receivedSlaveIP := <-slaveIsAliveIPChannel:
+			if receivedSlaveIP == slaveIP {
+				break
+			}
+			slaveIsAliveIPChannel <- receivedSlaveIP
 
-		case <-orderCompletedChannel:
-			return
+		case receivedButton := <-orderCompletedChannel:
+			if receivedButton == button {
+				return
+			}
+			orderCompletedChannel <- receivedButton
 
 		case <-After(500 * Millisecond):
 			externalOrderFromDeadSlaveChannel <- button
@@ -382,4 +445,6 @@ func findLocalIPAddress() string {
 			}
 		}
 	}
+	//Send to ErrorChannel, could not find IP
+	return ""
 }

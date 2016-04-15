@@ -44,10 +44,12 @@ type Message struct {
 	FromMaster         bool
 	AcknowledgeMessage bool
 	NewOrder           bool
+	OrderCompleted     bool
 	ElevatorInfoUpdate bool
 
-	MessageFrom  string
-	MessageTo    string
-	ElevatorInfo ElevatorInfo
-	ButtonInfo   ButtonInfo
+	MessageFrom               string
+	MessageTo                 string
+	ElevatorInfo              ElevatorInfo
+	ButtonInfo                ButtonInfo
+	UncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string
 }
