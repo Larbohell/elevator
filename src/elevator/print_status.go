@@ -4,17 +4,19 @@ import "fmt"
 import . "elevator_type"
 
 func Print_status(elevator ElevatorInfo) {
-	fmt.Printf("\n****Elevator status**** \n")
-	fmt.Printf("Floor: %d\n", elevator.CurrentFloor)
+	/*
+		fmt.Printf("\n****Elevator status**** \n")
+		fmt.Printf("Floor: %d\n", elevator.CurrentFloor)
 
-	switch elevator.Direction {
-	case Up:
-		fmt.Printf("Direction: Up\n")
-	case Down:
-		fmt.Printf("Direction: Down\n")
-	case Stop:
-		fmt.Printf("Direction: Stop\n")
-	}
+		switch elevator.Direction {
+		case Up:
+			fmt.Printf("Direction: Up\n")
+		case Down:
+			fmt.Printf("Direction: Down\n")
+		case Stop:
+			fmt.Printf("Direction: Stop\n")
+		}
+	*/
 	/*
 		switch(elevator.Behaviour){
 		case elevator_type.EB_Idle:
@@ -45,6 +47,7 @@ func Print_status(elevator ElevatorInfo) {
 		fmt.Printf("|\n")
 	}
 	fmt.Printf("  +--------------------+\n")
+	fmt.Printf("  +*************************************+\n")
 
 }
 
@@ -58,6 +61,12 @@ func Print_external(externalOrders [N_FLOORS][N_BUTTONS - 1]string) {
 		for btn := 0; btn < N_BUTTONS-1; btn++ {
 			if f == N_FLOORS-1 && btn == int(BUTTON_OUTSIDE_UP) || f == 0 && btn == int(BUTTON_OUTSIDE_DOWN) {
 				fmt.Printf("|     ")
+			} else {
+				if externalOrders[f][btn] != "" {
+					fmt.Printf("| " + externalOrders[f][btn][12:15] + " ")
+				} else {
+					fmt.Printf("|  -  ")
+				}
 			}
 		}
 		fmt.Printf("|\n")

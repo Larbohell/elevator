@@ -112,13 +112,13 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 
 		select {
 		case newExternalOrder := <-externalOrderChannel:
-			StatusChannel <- "	externalOrderChannel"
+			//////StatusChannel <- "	externalOrderChannel"
 
 			msgToMaster := Message{false, false, true, false, false, slaveIP, masterIP, elevator, newExternalOrder, uncompletedExternalOrders}
 			SendUdpMessage(msgToMaster)
 
 		case elevator = <-updateElevatorInfoChannel:
-			StatusChannel <- "	updateElevatorInfoChannel"
+			//////StatusChannel <- "	updateElevatorInfoChannel"
 			if masterIP == "0" {
 				break
 			}
@@ -135,14 +135,19 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 			//StatusChannel <- "		AcknowledgeMessage sent to master"
 
 			if messageFromMaster.NewOrder {
-				StatusChannel <- "		NewOrder"
+				//////StatusChannel <- "		NewOrder"
 				if messageFromMaster.MessageTo == slaveIP {
 					addToRequestsChannel <- messageFromMaster.ButtonInfo
 
 				} else if messageFromMaster.MessageTo == BROADCAST_IP {
 					uncompletedExternalOrders = messageFromMaster.UncompletedExternalOrders
 					uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders
+
+					StatusChannel <- "\n------------------------------------------------"
 					Print_external(uncompletedExternalOrders)
+					StatusChannel <- "\n"
+					Print_status(elevator)
+					StatusChannel <- "------------------------------------------------\n"
 				}
 
 			}
@@ -181,7 +186,7 @@ func messageFromMaster(receivedUdpMessageChannel chan Message, messageFromMaster
 
 func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo, uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string, orderCompletedByThisElevatorChannel chan ButtonInfo, uncompletedExternalOrdersMatrixChangedChannel chan [N_FLOORS][N_BUTTONS - 1]string) {
 	masterIP := findLocalIPAddress()
-	StatusChannel <- "Master is alive with IP: " + masterIP
+	//////StatusChannel <- "Master is alive with IP: " + masterIP
 
 	receivedUdpMessageChannel := make(chan Message, 1)
 	slaveIsAliveChannel := make(chan Message, 1)
@@ -224,14 +229,14 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 		}
 	}
 
-	StatusChannel <- "Right outside for"
+	//////StatusChannel <- "Right outside for"
 
 	for {
 		//StatusChannel <- "In Master: "
 
 		select {
 		case updatedMasterElevatorInfo := <-updateElevatorInfoChannel:
-
+			elevator = updatedMasterElevatorInfo
 			masterElevatorInfoChannel <- updatedMasterElevatorInfo
 
 			SendUdpMessage(statusMessageToSlave)
@@ -269,11 +274,11 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 			//StatusChannel <- "b"
 
 			if receivedMessage.NewOrder {
-				StatusChannel <- "		NewOrder"
+				//////StatusChannel <- "		NewOrder"
 				externalOrderChannel <- receivedMessage.ButtonInfo
 
 			} else if receivedMessage.ElevatorInfoUpdate {
-				StatusChannel <- "		ElevatorInfoUpdate, CurrentFloor = " + strconv.Itoa(receivedMessage.ElevatorInfo.CurrentFloor)
+				//////StatusChannel <- "		ElevatorInfoUpdate, CurrentFloor = " + strconv.Itoa(receivedMessage.ElevatorInfo.CurrentFloor)
 
 			} else if receivedMessage.AcknowledgeMessage {
 				//StatusChannel <- "		AcknowledgeMessage from Slave received"
@@ -296,20 +301,20 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 
 		case newExternalOrder := <-externalOrderChannel:
 			//StatusChannel <- "3"
-			StatusChannel <- "	externalOrderChannel"
+			//////StatusChannel <- "	externalOrderChannel"
 
 			findBestElevatorForTheJobChannel <- newExternalOrder
 			bestElevatorIP := <-thisIsTheBestElevatorChannel
-			StatusChannel <- "		bestElevatorIP = " + bestElevatorIP
+			//////StatusChannel <- "		bestElevatorIP = " + bestElevatorIP
 
 			// Create orderWatchdog thread, which monitors that order, times out if slave not alive for some time, and terminates if order is served
 
 			if bestElevatorIP == masterIP {
-				StatusChannel <- "			bestElevatorIP == masterIP"
+				//////StatusChannel <- "			bestElevatorIP == masterIP"
 				addToRequestsChannel <- newExternalOrder
 			} else {
 				//Order best slave to excecute order
-				StatusChannel <- "			bestElevatorIP = Slave"
+				//////StatusChannel <- "			bestElevatorIP = Slave"
 				msgToSlave := Message{true, false, true, false, false, masterIP, bestElevatorIP, elevator, newExternalOrder, uncompletedExternalOrders}
 
 				go orderWatchdog(bestElevatorIP, newExternalOrder, slaveIsAliveIPChannel, externalOrderFromDeadSlaveChannel, orderCompletedChannel)
@@ -321,10 +326,11 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 
 			uncompletedExternalOrders[newExternalOrder.Floor][newExternalOrder.Button] = bestElevatorIP
 
-			Print_external(uncompletedExternalOrders)
-
 			msgToSlaves := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, newExternalOrder, uncompletedExternalOrders}
 			SendUdpMessage(msgToSlaves)
+
+			Print_external(uncompletedExternalOrders)
+			Print_status(elevator)
 
 		case button := <-orderCompletedByThisElevatorChannel:
 			//StatusChannel <- "4"
@@ -356,7 +362,7 @@ func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator El
 	slaveWatchdogChannelsMap := make(map[string]chan bool)
 
 	terminateSlaveChannel := make(chan string)
-	StatusChannel <- "Number of slaves at the beginning: " + strconv.Itoa(len(slavesAliveMap))
+	//////StatusChannel <- "Number of slaves at the beginning: " + strconv.Itoa(len(slavesAliveMap))
 
 	for {
 		select {
@@ -372,7 +378,7 @@ func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator El
 				newWatchdogChannel := make(chan bool, 1)
 				slaveWatchdogChannelsMap[aliveMessage.MessageFrom] = newWatchdogChannel
 
-				StatusChannel <- "Slave with IP " + aliveMessage.MessageFrom + " was added to list of slaves, number of slaves is now: " + strconv.Itoa(len(slavesAliveMap))
+				//////StatusChannel <- "Slave with IP " + aliveMessage.MessageFrom + " was added to list of slaves, number of slaves is now: " + strconv.Itoa(len(slavesAliveMap))
 
 				go slaveWatchdog(aliveMessage.MessageFrom, slaveWatchdogChannelsMap[aliveMessage.MessageFrom], terminateSlaveChannel)
 			} else {
@@ -382,13 +388,13 @@ func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator El
 		case slaveToBeTerminatedIP := <-terminateSlaveChannel:
 			delete(slavesAliveMap, slaveToBeTerminatedIP)
 			delete(slaveWatchdogChannelsMap, slaveToBeTerminatedIP)
-			StatusChannel <- "slaveTracker terminates slave with IP: " + slaveToBeTerminatedIP + ", number of slaves: " + strconv.Itoa(len(slavesAliveMap))
+			//////StatusChannel <- "slaveTracker terminates slave with IP: " + slaveToBeTerminatedIP + ", number of slaves: " + strconv.Itoa(len(slavesAliveMap))
 
 			slavesAliveMapIsChangedChannel <- slavesAliveMap
 
 		case terminate := <-terminateThreadChannel:
 			terminateThreadChannel <- terminate
-			StatusChannel <- "slaveTracker is terminated"
+			//////StatusChannel <- "slaveTracker is terminated"
 			threadIsTerminatedChannel <- true
 			return
 
@@ -406,7 +412,7 @@ func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator El
 }
 
 func slaveWatchdog(slaveIP string, slaveIsAliveChannel chan bool, terminateSlaveChannel chan string) {
-	StatusChannel <- "slaveWatchdog thread created"
+	//////StatusChannel <- "slaveWatchdog thread created"
 	for {
 		select {
 		case <-slaveIsAliveChannel:
@@ -414,7 +420,7 @@ func slaveWatchdog(slaveIP string, slaveIsAliveChannel chan bool, terminateSlave
 
 		case <-After(500 * Millisecond):
 			terminateSlaveChannel <- slaveIP
-			StatusChannel <- "slaveWatchdog timed out, slaveWatchdog thread terminated"
+			//////StatusChannel <- "slaveWatchdog timed out, slaveWatchdog thread terminated"
 			return
 			/*
 				case terminate <- terminateThreadChannel:
@@ -428,7 +434,7 @@ func slaveWatchdog(slaveIP string, slaveIsAliveChannel chan bool, terminateSlave
 }
 
 func orderWatchdog(slaveIP string, button ButtonInfo, slaveIsAliveIPChannel chan string, externalOrderFromDeadSlaveChannel chan ButtonInfo, orderCompletedChannel chan ButtonInfo) {
-	StatusChannel <- "orderWatchdog thread created"
+	//////StatusChannel <- "orderWatchdog thread created"
 	for {
 		select {
 		case receivedSlaveIP := <-slaveIsAliveIPChannel:
@@ -445,7 +451,7 @@ func orderWatchdog(slaveIP string, button ButtonInfo, slaveIsAliveIPChannel chan
 
 		case <-After(500 * Millisecond):
 			externalOrderFromDeadSlaveChannel <- button
-			StatusChannel <- "orderWatchdog timed out, orderWatchdog thread terminated"
+			//////StatusChannel <- "orderWatchdog timed out, orderWatchdog thread terminated"
 			return
 			/*
 				case terminate <- terminateThreadChannel:

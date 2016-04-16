@@ -4,7 +4,6 @@ import "driver"
 import . "elevator_type"
 import . "statusHandler"
 import "orderHandler"
-import . "elevator"
 import "network"
 
 //import "net"
@@ -69,15 +68,15 @@ func main() {
 	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel)
 
 	for {
-		StatusChannel <- "In main select: "
+		//////StatusChannel <- "In main select: "
 		select {
 		case buttonPushed := <-addToRequestsChannel:
-			StatusChannel <- "	addToRequestsChannel, "
+			//////StatusChannel <- "	addToRequestsChannel, "
 			setButtonLightChannel <- buttonPushed
 			switch elevator.State {
 
 			case State_Idle:
-				StatusChannel <- "		State: Idle\n"
+				//////StatusChannel <- "		State: Idle\n"
 				if elevator.CurrentFloor != buttonPushed.Floor {
 
 					elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
@@ -87,26 +86,26 @@ func main() {
 					} else if direction < 0 {
 						direction = int(Down)
 					} else {
-						errorChannel <- "In buttonPushed-> State_Idle: Direction is zero"
+						//////errorChannel <- "In buttonPushed-> State_Idle: Direction is zero"
 					}
 					setMovingDirectionChannel <- Dir(direction)
 					elevator.State = State_Moving
 
 					updateElevatorInfoChannel <- elevator
 				} else {
-					StatusChannel <- "			Elevator Idle in same floor as button pushed"
+					//////StatusChannel <- "			Elevator Idle in same floor as button pushed"
 					//stop <- true
 				}
 
 			case State_Moving:
-				StatusChannel <- "		State: Moving\n"
+				//////StatusChannel <- "		State: Moving\n"
 				elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
 
 				updateElevatorInfoChannel <- elevator
 			}
 
 		case <-stop:
-			StatusChannel <- "	stop"
+			//////StatusChannel <- "	stop"
 
 			stopChannel <- true
 			elevator.State = State_Idle
@@ -133,21 +132,20 @@ func main() {
 			clearButtonLightsAtFloorChannel <- elevator.CurrentFloor
 
 			updateElevatorInfoChannel <- elevator
-			Print_status(elevator)
 
 		case <-doorClosedChannel:
-			StatusChannel <- "	doorClosedChannel"
+			//////StatusChannel <- "	doorClosedChannel"
 			elevator.Direction = orderHandler.Requests_chooseDirection(elevator)
 
-			StatusChannel <- "Before set moving direction"
+			//////StatusChannel <- "Before set moving direction"
 			setMovingDirectionChannel <- elevator.Direction
-			StatusChannel <- "After set moving dir"
+			//////StatusChannel <- "After set moving dir"
 
 			updateElevatorInfoChannel <- elevator //PROBLEM HERE!!!
-			StatusChannel <- "updateEpevatorInfoChannel"
+			//////StatusChannel <- "updateEpevatorInfoChannel"
 
 		case arrivedAtFloor := <-arrivedAtFloorChannel:
-			StatusChannel <- "	arrivedAtFloorChannel"
+			//////StatusChannel <- "	arrivedAtFloorChannel"
 
 			previousFloor = elevator.CurrentFloor
 			elevator.CurrentFloor = arrivedAtFloor
@@ -164,7 +162,7 @@ func main() {
 			} else if direction == 0 {
 				elevator.Direction = Stop // Happens first time, after init
 			} else {
-				errorChannel <- "Error in case 'arriwedAtFloor': Direction neither up nor down."
+				//////errorChannel <- "Error in case 'arriwedAtFloor': Direction neither up nor down."
 			}
 
 			if orderHandler.ShouldStop(elevator) {
@@ -174,7 +172,7 @@ func main() {
 			updateElevatorInfoChannel <- elevator
 
 		case uncompletedExternalOrders := <-uncompletedExternalOrdersMatrixChangedChannel: //change to updateExtLightsChannel
-			StatusChannel <- "In uncompletedExternalOrdersMatrixChangedChannel turn off or on lights case"
+			//////StatusChannel <- "In uncompletedExternalOrdersMatrixChangedChannel turn off or on lights case"
 			for floor := 0; floor < N_FLOORS; floor++ {
 				for btn := 0; btn < N_BUTTONS-1; btn++ {
 					var button ButtonInfo
