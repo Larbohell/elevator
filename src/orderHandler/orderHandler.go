@@ -45,6 +45,8 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 					bestElevatorIP = slaveIP
 				}
 			}
+			
+
 			masterCostValue := costFunction(masterElevatorInfo, buttonInfo)
 			if masterCostValue < minValue {
 				minValue = masterCostValue
