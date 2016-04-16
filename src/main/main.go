@@ -4,7 +4,7 @@ import "driver"
 import . "elevator_type"
 import . "statusHandler"
 import "orderHandler"
-
+import . "elevator"
 import "network"
 
 //import "net"
@@ -133,6 +133,7 @@ func main() {
 			clearButtonLightsAtFloorChannel <- elevator.CurrentFloor
 
 			updateElevatorInfoChannel <- elevator
+			Print_status(elevator)
 
 		case <-doorClosedChannel:
 			StatusChannel <- "	doorClosedChannel"

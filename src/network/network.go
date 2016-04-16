@@ -12,6 +12,7 @@ import "orderHandler"
 import . "statusHandler"
 
 import "math/rand"
+import . "elevator"
 
 //import . "errorHandler"
 
@@ -141,7 +142,7 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 				} else if messageFromMaster.MessageTo == BROADCAST_IP {
 					uncompletedExternalOrders = messageFromMaster.UncompletedExternalOrders
 					uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders
-
+					Print_external(uncompletedExternalOrders)
 				}
 
 			}
@@ -250,7 +251,6 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 				}
 				slaveIsAliveIPChannel <- receivedMessage.MessageFrom
 
-
 			} else {
 				myThreeLastNumbersOfIP, _ := strconv.Atoi(masterIP[12:15])
 				receivedThreeLastNumbersOfIP, _ := strconv.Atoi(receivedMessage.MessageFrom[12:15])
@@ -285,6 +285,7 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 				SendUdpMessage(msgToSlave)
 
 				uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders //Update own lights
+				Print_external(uncompletedExternalOrders)
 
 				// Clears button lights in all slaves (and itself), and remove order from unserved external orders matrix and kill orderWatchdog
 			}
@@ -319,6 +320,9 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 			//Update uncompletedExternalOrders in all slaves
 
 			uncompletedExternalOrders[newExternalOrder.Floor][newExternalOrder.Button] = bestElevatorIP
+
+			Print_external(uncompletedExternalOrders)
+
 			msgToSlaves := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, newExternalOrder, uncompletedExternalOrders}
 			SendUdpMessage(msgToSlaves)
 
@@ -367,7 +371,7 @@ func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator El
 
 				newWatchdogChannel := make(chan bool, 1)
 				slaveWatchdogChannelsMap[aliveMessage.MessageFrom] = newWatchdogChannel
-				
+
 				StatusChannel <- "Slave with IP " + aliveMessage.MessageFrom + " was added to list of slaves, number of slaves is now: " + strconv.Itoa(len(slavesAliveMap))
 
 				go slaveWatchdog(aliveMessage.MessageFrom, slaveWatchdogChannelsMap[aliveMessage.MessageFrom], terminateSlaveChannel)
