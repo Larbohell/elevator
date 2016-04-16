@@ -7,7 +7,7 @@ type ElevatorState int
 
 const (
 	State_Idle     ElevatorState = 0
-	State_DoorOpen ElevatorState = 1
+	State_DoorOpen ElevatorState = 1 // Not used, remove
 	State_Moving   ElevatorState = 2
 )
 
@@ -26,7 +26,7 @@ type ElevatorInfo struct {
 	State        ElevatorState
 }
 
-type Button int
+type Button int // Should be ButtonType
 
 const (
 	BUTTON_OUTSIDE_UP     Button = 0
@@ -35,13 +35,21 @@ const (
 )
 
 type ButtonInfo struct {
-	Button Button
+	Button Button //should be named ButtonType Button
 	Floor  int
 	Value  int
 }
 
 type Message struct {
-	FromMaster   bool
-	ElevatorInfo ElevatorInfo
-	ButtonInfo   int
+	FromMaster         bool
+	AcknowledgeMessage bool
+	NewOrder           bool
+	OrderCompleted     bool
+	ElevatorInfoUpdate bool
+
+	MessageFrom               string
+	MessageTo                 string
+	ElevatorInfo              ElevatorInfo
+	ButtonInfo                ButtonInfo
+	UncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string
 }
