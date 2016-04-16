@@ -20,6 +20,9 @@ import "network"
 
 //TODO!!!
 //Open door when elevator idle and buttons pushed in same floor, and turn off lights
+// Aggressive button push on external buttons in floor 0 or 3 makes the elevator pass that floor and go out of bounds
+// Process-pairs thing, write info to file so that backup can take over where the main process died
+//uncompletedExternalList is not received by Slaves!
 
 func main() {
 

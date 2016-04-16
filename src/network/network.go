@@ -72,6 +72,8 @@ func SendUdpMessage(msg Message) {
 	sendSock, err := net.DialUDP("udp", nil, baddr)
 	if err != nil {
 		StatusChannel <- err.Error() // PRINT TO ERROR
+		//sendSock.Close()
+		return
 	}
 	buf, err := json.Marshal(msg)
 	if err != nil {
@@ -250,7 +252,6 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 				}
 				slaveIsAliveIPChannel <- receivedMessage.MessageFrom
 
-
 			} else {
 				myThreeLastNumbersOfIP, _ := strconv.Atoi(masterIP[12:15])
 				receivedThreeLastNumbersOfIP, _ := strconv.Atoi(receivedMessage.MessageFrom[12:15])
@@ -367,7 +368,7 @@ func slaveTracker(slaveIsAliveChannel chan Message, masterIP string, elevator El
 
 				newWatchdogChannel := make(chan bool, 1)
 				slaveWatchdogChannelsMap[aliveMessage.MessageFrom] = newWatchdogChannel
-				
+
 				StatusChannel <- "Slave with IP " + aliveMessage.MessageFrom + " was added to list of slaves, number of slaves is now: " + strconv.Itoa(len(slavesAliveMap))
 
 				go slaveWatchdog(aliveMessage.MessageFrom, slaveWatchdogChannelsMap[aliveMessage.MessageFrom], terminateSlaveChannel)
@@ -439,7 +440,7 @@ func orderWatchdog(slaveIP string, button ButtonInfo, slaveIsAliveIPChannel chan
 			}
 			orderCompletedChannel <- receivedButton
 
-		case <-After(500 * Millisecond):
+		case <-After(300 * Millisecond):
 			externalOrderFromDeadSlaveChannel <- button
 			StatusChannel <- "orderWatchdog timed out, orderWatchdog thread terminated"
 			return
