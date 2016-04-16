@@ -87,10 +87,22 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 }
 
 func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
+	var cost int
+	var directionToOrder Dir
 	distance := elevator.CurrentFloor - buttonInfo.Floor
 	// JallaAbs()
 	if distance < 0 {
 		distance = distance * -1
+		directionToOrder = Down
+	} else {
+		directionToOrder = Up
 	}
-	return distance
+
+	if elevator.Direction != Stop {
+		if directionToOrder != elevator.Direction {
+			cost += N_FLOORS
+		}
+	}
+	cost += distance
+	return cost
 }
