@@ -2,9 +2,9 @@ package orderHandler
 
 import . "elevator_type"
 
-//import . "statusHandler"
+import . "statusHandler"
 
-//import "strconv"
+import "strconv"
 
 //import "math"
 
@@ -93,9 +93,9 @@ func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
 	// JallaAbs()
 	if distance < 0 {
 		distance = distance * -1
-		directionToOrder = Down
-	} else {
 		directionToOrder = Up
+	} else {
+		directionToOrder = Down
 	}
 
 	if elevator.Direction != Stop {
@@ -104,5 +104,7 @@ func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
 		}
 	}
 	cost += distance
+	StatusChannel <- "Distance = " + strconv.Itoa(distance) + " and directionToOrder = " + strconv.Itoa(int(directionToOrder)) + " and elevator.Direction = " + strconv.Itoa(int(elevator.Direction))
+	StatusChannel <- "Cost = " + strconv.Itoa(cost)
 	return cost
 }

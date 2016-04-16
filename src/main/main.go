@@ -90,6 +90,7 @@ func main() {
 					}
 					setMovingDirectionChannel <- Dir(direction)
 					elevator.State = State_Moving
+					elevator.Direction = Dir(direction)
 
 					updateElevatorInfoChannel <- elevator
 				} else {
