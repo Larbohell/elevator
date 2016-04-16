@@ -45,9 +45,10 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 					bestElevatorIP = slaveIP
 				}
 			}
-			
+			StatusChannel <- "Slave distance: " + strconv.Itoa(minValue)
 
 			masterCostValue := costFunction(masterElevatorInfo, buttonInfo)
+			StatusChannel <- "Master distance: " + strconv.Itoa(masterCostValue)
 			if masterCostValue < minValue {
 				minValue = masterCostValue
 				bestElevatorIP = masterIP
