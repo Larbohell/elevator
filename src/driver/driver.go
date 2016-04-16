@@ -124,6 +124,9 @@ func read_floor_sensor(floorSensorChannel chan int) {
 		Sleep(10 * Millisecond)
 		currentFloor := Elevator_get_floor_sensor_signal()
 		if currentFloor != lastFloor {
+			if (currentFloor == 0 || currentFloor == N_FLOORS - 1){
+				Elevator_set_motor_direction(MOTOR_DIRECTION_STOP)
+			}
 			lastFloor = currentFloor
 			floorSensorChannel <- currentFloor
 		}

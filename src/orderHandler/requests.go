@@ -6,10 +6,6 @@ func ShouldStop(elevator elevator_type.ElevatorInfo) bool {
 	// Returns true if anyone wants off or on (in the direction of travel), or if a request
 	// has been cleared while the elevator was on its way
 
-	if elevator.CurrentFloor == 0 || elevator.CurrentFloor == elevator_type.N_FLOORS {
-		return true
-	}
-
 	switch elevator.Direction {
 	case elevator_type.Down:
 		if elevator.Requests[elevator.CurrentFloor][elevator_type.BUTTON_OUTSIDE_DOWN] == 1 ||
