@@ -2,9 +2,9 @@ package orderHandler
 
 import . "elevator_type"
 
-import . "statusHandler"
+//import . "statusHandler"
 
-import "strconv"
+//import "strconv"
 
 //import "math"
 
@@ -87,24 +87,36 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 }
 
 func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
-	var cost int
-	var directionToOrder Dir
 	distance := elevator.CurrentFloor - buttonInfo.Floor
 	// JallaAbs()
 	if distance < 0 {
 		distance = distance * -1
-		directionToOrder = Up
-	} else {
-		directionToOrder = Down
 	}
 
-	if elevator.Direction != Stop {
-		if directionToOrder != elevator.Direction {
-			cost += N_FLOORS
+	return distance
+
+	//Tried to improve. Did not
+	/*
+		var cost int
+		var directionToOrder Dir
+		distance := elevator.CurrentFloor - buttonInfo.Floor
+		// JallaAbs()
+		if distance < 0 {
+			distance = distance * -1
+			directionToOrder = Up
+		} else {
+			directionToOrder = Down
 		}
-	}
-	cost += distance
-	StatusChannel <- "Distance = " + strconv.Itoa(distance) + " and directionToOrder = " + strconv.Itoa(int(directionToOrder)) + " and elevator.Direction = " + strconv.Itoa(int(elevator.Direction))
-	StatusChannel <- "Cost = " + strconv.Itoa(cost)
-	return cost
+
+		if elevator.Direction != Stop {
+			if directionToOrder != elevator.Direction {
+				cost += N_FLOORS
+			}
+		}
+		cost += distance
+		StatusChannel <- "Distance = " + strconv.Itoa(distance) + " and directionToOrder = " + strconv.Itoa(int(directionToOrder)) + " and elevator.Direction = " + strconv.Itoa(int(elevator.Direction))
+		StatusChannel <- "Cost = " + strconv.Itoa(cost)
+		return cost
+	*/
+
 }

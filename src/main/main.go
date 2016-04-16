@@ -19,6 +19,7 @@ import "network"
 
 //TODO!!!
 //Open door when elevator idle and buttons pushed in same floor, and turn off lights
+//Make sure that all elevator parameters are correct after program init, especially when starting in a floor
 
 func main() {
 
