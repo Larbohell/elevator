@@ -142,7 +142,7 @@ func main() {
 			setMovingDirectionChannel <- elevator.Direction
 			StatusChannel <- "After set moving dir"
 
-			updateElevatorInfoChannel <- elevator
+			updateElevatorInfoChannel <- elevator //PROBLEM HERE!!!
 			StatusChannel <- "updateEpevatorInfoChannel"
 
 		case arrivedAtFloor := <-arrivedAtFloorChannel:
