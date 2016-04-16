@@ -7,12 +7,12 @@ import "strconv"
 
 //import "math"
 
-func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan ButtonInfo, addToRequestsChannel chan ButtonInfo, externalOrderChannel chan ButtonInfo) {
+func OrderHandler(newOrderChannel chan ButtonInfo, removeOrderChannel chan ButtonInfo, addToRequestsChannel chan ButtonInfo, externalOrderChannel chan ButtonInfo) {
 	StatusChannel <- "In OrderHandler"
 
 	for {
 		select {
-		case addOrder := <-addOrderChannel:
+		case addOrder := <-newOrderChannel:
 			if addOrder.Button == BUTTON_INSIDE_COMMAND {
 				StatusChannel <- "	Button pushed = INTERNAL"
 				addToRequestsChannel <- addOrder
@@ -20,6 +20,7 @@ func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan Butto
 				// Inform master, master handles order and adds to one of the elevator's queues
 				StatusChannel <- "	Button pushed = EXTERNAL"
 				externalOrderChannel <- addOrder
+				StatusChannel <- "Pushed to externalOrderCHannel"
 			}
 		}
 	}

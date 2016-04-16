@@ -19,7 +19,7 @@ import "network"
 //"129.24.187.158" = workspace 10
 
 //TODO!!!
-//Open door when elevator idle and buttons pushed in same floor, and turn off lights 
+//Open door when elevator idle and buttons pushed in same floor, and turn off lights
 
 func main() {
 
@@ -137,9 +137,13 @@ func main() {
 		case <-doorClosedChannel:
 			StatusChannel <- "	doorClosedChannel"
 			elevator.Direction = orderHandler.Requests_chooseDirection(elevator)
+
+			StatusChannel <- "Before set moving direction"
 			setMovingDirectionChannel <- elevator.Direction
+			StatusChannel <- "After set moving dir"
 
 			updateElevatorInfoChannel <- elevator
+			StatusChannel <- "updateEpevatorInfoChannel"
 
 		case arrivedAtFloor := <-arrivedAtFloorChannel:
 			StatusChannel <- "	arrivedAtFloorChannel"
@@ -167,10 +171,9 @@ func main() {
 			}
 
 			updateElevatorInfoChannel <- elevator
-			
 
 		case uncompletedExternalOrders := <-uncompletedExternalOrdersMatrixChangedChannel: //change to updateExtLightsChannel
-
+			StatusChannel <- "In uncompletedExternalOrdersMatrixChangedChannel turn off or on lights case"
 			for floor := 0; floor < N_FLOORS; floor++ {
 				for btn := 0; btn < N_BUTTONS-1; btn++ {
 					var button ButtonInfo
