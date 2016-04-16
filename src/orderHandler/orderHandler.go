@@ -14,11 +14,11 @@ func OrderHandler(newOrderChannel chan ButtonInfo, removeOrderChannel chan Butto
 		select {
 		case addOrder := <-newOrderChannel:
 			if addOrder.Button == BUTTON_INSIDE_COMMAND {
-				StatusChannel <- "	Button pushed = INTERNAL, in floor: " + addOrder.Floor
+				StatusChannel <- "	Button pushed = INTERNAL, in floor: " + strconv.Itoa(addOrder.Floor)
 				addToRequestsChannel <- addOrder
 			} else {
 				// Inform master, master handles order and adds to one of the elevator's queues
-				StatusChannel <- "	Button pushed = EXTERNAL, in floor " + +addOrder.Floor
+				StatusChannel <- "	Button pushed = EXTERNAL, in floor " + strconv.Itoa(addOrder.Floor)
 				externalOrderChannel <- addOrder
 				StatusChannel <- "Pushed to externalOrderCHannel"
 			}
