@@ -63,6 +63,7 @@ func SendUdpMessage(msg Message) {
 
 	baddr, err := net.ResolveUDPAddr("udp", msg.MessageTo+PORT)
 
+	StatusChannel <- "Sending message to IP " + msg.MessageTo
 	/*
 		if msg.FromMaster {
 			baddr, err = net.ResolveUDPAddr("udp", "129.241.187.255:26969")
@@ -212,7 +213,6 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 				button.Value = 1
 
 				go orderWatchdog(uncompletedExternalOrders[floor][btn], button, slaveIsAliveIPChannel, externalOrderFromDeadSlaveChannel, orderCompletedChannel)
-				
 
 			}
 		}
@@ -236,10 +236,18 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 			}
 			StatusChannel <- "a"
 
-			//StatusChannel <- "Received message from IP: " + receivedMessage.MessageFrom
+			StatusChannel <- "Received message from IP: " + receivedMessage.MessageFrom
 			if !receivedMessage.FromMaster {
+				StatusChannel <- "Not from master"
 				slaveIsAliveChannel <- receivedMessage
+				StatusChannel <- "1st done"
+				select {
+				case <-slaveIsAliveIPChannel:
+				default:
+				}
 				slaveIsAliveIPChannel <- receivedMessage.MessageFrom
+
+				StatusChannel <- "2nd done"
 
 			} else {
 				myThreeLastNumbersOfIP, _ := strconv.Atoi(masterIP[12:15])
@@ -300,9 +308,9 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 				//Order best slave to excecute order
 				StatusChannel <- "			bestElevatorIP = Slave"
 				msgToSlave := Message{true, false, true, false, false, masterIP, bestElevatorIP, elevator, newExternalOrder, uncompletedExternalOrders}
-				
-				go orderWatchdog(bestElevatorIP, newExternalOrder, slaveIsAliveIPChannel, externalOrderFromDeadSlaveChannel, orderCompletedChannel)	
-				
+
+				go orderWatchdog(bestElevatorIP, newExternalOrder, slaveIsAliveIPChannel, externalOrderFromDeadSlaveChannel, orderCompletedChannel)
+
 				SendUdpMessage(msgToSlave)
 			}
 
