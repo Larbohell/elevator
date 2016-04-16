@@ -63,7 +63,6 @@ func SendUdpMessage(msg Message) {
 
 	baddr, err := net.ResolveUDPAddr("udp", msg.MessageTo+PORT)
 
-	StatusChannel <- "Sending message to IP " + msg.MessageTo
 	/*
 		if msg.FromMaster {
 			baddr, err = net.ResolveUDPAddr("udp", "129.241.187.255:26969")
@@ -71,12 +70,18 @@ func SendUdpMessage(msg Message) {
 	*/
 
 	sendSock, err := net.DialUDP("udp", nil, baddr)
-	buf, err := json.Marshal(msg)
-	_, err = sendSock.Write(buf)
-
 	if err != nil {
-		//ErrorChannel <- "SendUdpMessage: Error."
+		StatusChannel <- err.Error() // PRINT TO ERROR
 	}
+	buf, err := json.Marshal(msg)
+	if err != nil {
+		StatusChannel <- err.Error() // PRINT TO ERROR
+	}
+	_, err = sendSock.Write(buf)
+	if err != nil {
+		StatusChannel <- err.Error() // PRINT TO ERROR
+	}
+	sendSock.Close()
 }
 
 func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateElevatorInfoChannel chan ElevatorInfo, addToRequestsChannel chan ButtonInfo, uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string, orderCompletedByThisElevatorChannel chan ButtonInfo, uncompletedExternalOrdersMatrixChangedChannel chan [N_FLOORS][N_BUTTONS - 1]string) {
