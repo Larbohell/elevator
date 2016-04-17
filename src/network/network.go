@@ -378,7 +378,9 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 				msgToSlave := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, receivedMessage.ButtonInfo, uncompletedExternalOrders}
 				SendUdpMessage(msgToSlave)
 
+				StatusChannel <- "Updated uncompletedExternalOrders sent to slave from Master"
 				uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders //Update own lights
+				StatusChannel <- "Master should update lights based on unCompletedExternalOrders list"
 
 				// Clears button lights in all slaves (and itself), and remove order from unserved external orders matrix and kill orderWatchdog
 			}
