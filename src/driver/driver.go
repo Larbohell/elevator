@@ -3,6 +3,10 @@ package driver
 import . "elevator_type"
 import . "time"
 
+//import . "statusHandler"
+
+//import "strconv"
+
 // Make all driver funcs except Driver() lowercase
 
 func elevator_init(startingPoint ElevatorInfo, floorSensorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo) {
@@ -14,6 +18,12 @@ func elevator_init(startingPoint ElevatorInfo, floorSensorChannel chan int, erro
 
 	floor := <-floorSensorChannel
 
+	// On a floor, but it doesn't match up with the floor loaded from startingPoint (backup file)
+	if floor != -1 && floor != startingPoint.CurrentFloor {
+		elevator.CurrentFloor = floor
+	}
+
+	// Between floors but state is not State_Moving
 	if floor == -1 && elevator.State != State_Moving {
 		Elevator_set_motor_direction(MOTOR_DIRECTION_DOWN)
 
@@ -39,10 +49,12 @@ func elevator_init(startingPoint ElevatorInfo, floorSensorChannel chan int, erro
 		Elevator_set_motor_direction(Motor_direction(elevator.Direction))
 	}
 
+	//Set all lights to correct values
 	for floor = 0; floor < N_FLOORS; floor++ {
 		for btn := 0; btn < N_BUTTONS; btn++ {
 			if floor != 0 && btn == int(BUTTON_OUTSIDE_DOWN) {
 				Elevator_set_button_lamp(BUTTON_OUTSIDE_DOWN, floor, elevator.Requests[floor][btn])
+
 			}
 			if floor != (N_BUTTONS-1) && btn == int(BUTTON_OUTSIDE_UP) {
 				Elevator_set_button_lamp(BUTTON_OUTSIDE_UP, floor, elevator.Requests[floor][btn])
@@ -50,6 +62,7 @@ func elevator_init(startingPoint ElevatorInfo, floorSensorChannel chan int, erro
 			Elevator_set_button_lamp(BUTTON_INSIDE_COMMAND, floor, elevator.Requests[floor][btn])
 		}
 	}
+	Elevator_set_floor_indicator(elevator.CurrentFloor)
 	initialElevatorStateChannel <- elevator
 }
 
@@ -67,6 +80,8 @@ func Driver(startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, open
 			Elevator_set_motor_direction(Motor_direction(movingDirection))
 
 		case <-openDoorChannel:
+			//StatusChannel <- "IN DRIVER, openDoorChannel"
+
 			Elevator_set_motor_direction(MOTOR_DIRECTION_STOP)
 
 			Elevator_set_door_open_lamp(1)
@@ -82,13 +97,20 @@ func Driver(startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, open
 				}
 			}
 
+			//<-After(3 * Second)
 			Elevator_set_door_open_lamp(0)
+			//StatusChannel <- "IN DRIVER, openDoorChannel, door lamp should be off"
 			doorClosedChannel <- true
 
 		case floor := <-floorSensorChannel:
+			//StatusChannel <- "IN DRIVER: floorSensorChannel = " + strconv.Itoa(floor)
 			if floor != -1 {
 				Elevator_set_floor_indicator(floor)
+				//StatusChannel <- "Before arrivedAtFloorChennel at floor " + strconv.Itoa(floor)
 				arrivedAtFloorChannel <- floor
+				//StatusChannel <- "Arrived at floor: " + strconv.Itoa(floor)
+
+				//StatusChannel <- "Floor: " + strconv.Itoa(floor)
 			}
 		}
 	}
@@ -120,6 +142,7 @@ func read_buttons(newOrderChannel chan ButtonInfo) {
 
 				if button_value && button_value != previous_button_value[floor][button] {
 					newOrder := ButtonInfo{Button(button), floor, 1}
+					//StatusChannel <- "Button pushed on low level: " + strconv.Itoa(int(newOrder.Button))
 
 					newOrderChannel <- newOrder
 				}
@@ -130,16 +153,21 @@ func read_buttons(newOrderChannel chan ButtonInfo) {
 }
 
 func read_floor_sensor(floorSensorChannel chan int) {
+	//StatusChannel <- "Even here?"
 	lastFloor := N_FLOORS + 1 //Impossible floor value
 
 	for {
 		Sleep(10 * Millisecond)
+		//StatusChannel <- "Sleep"
 		currentFloor := Elevator_get_floor_sensor_signal()
 		if currentFloor != -1 {
+			//StatusChannel <- "IN READ_FLOOR_SENSOR: Current floor = " + strconv.Itoa(currentFloor)
 		}
 		if currentFloor != lastFloor {
 			lastFloor = currentFloor
+			//StatusChannel <- "Before floorSensorChannel" + strconv.Itoa(currentFloor)
 			floorSensorChannel <- currentFloor
+			//StatusChannel <- "After floorSensorChannel, floor " + strconv.Itoa(currentFloor)
 		}
 	}
 }
