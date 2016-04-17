@@ -17,7 +17,7 @@ import "math/rand"
 
 //import . "errorHandler"
 
-const PORT string = ":24241"
+const PORT string = ":24200"
 const PORT_FOR_BACKUP_PROCESS string = ":11114"
 
 const BROADCAST_IP string = "129.241.187.255"

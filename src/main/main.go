@@ -39,7 +39,7 @@ func main() {
 	for {
 		if primary {
 			spawn_backup()
-
+			startingPoint, _ = fileHandler.Read()
 			StatusChannel <- "IN main.go, backup is about to be primary: Elevator currentFloor = " + strconv.Itoa(startingPoint.CurrentFloor) + " , direction = " + strconv.Itoa(int(startingPoint.Direction)) + ", State: " + strconv.Itoa(int(startingPoint.State))
 			elevator.Run_elevator(firstTimeRunning, startingPoint, errorChannel)
 

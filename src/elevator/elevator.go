@@ -30,6 +30,8 @@ import "strconv"
 // In driver.read_floor_sensor() -> After backup process takes over, floor sensor never returns a value != -1, which means that arrivedAtFloorCHannel in elevator.go never activates
 // so the elevator never stops at a floor
 
+// Button light don't light up before after door close
+
 //Case DoorOpen: lights
 
 func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChannel chan string) {
@@ -52,11 +54,12 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 	newOrderChannel := make(chan ButtonInfo, 1)
 	removeOrderChannel := make(chan ButtonInfo, 1)
 	initIsFinished := make(chan bool)
+	initFloorChannel := make(chan int)
 	arrivedAtFloorChannel := make(chan int, 1)
 
 	addToRequestsChannel := make(chan ButtonInfo)
 	stop := make(chan bool, 1)
-	initialElevatorStateChannel := make(chan ElevatorInfo, 1)
+	//initialElevatorStateChannel := make(chan ElevatorInfo, 1)
 	doorClosedChannel := make(chan bool, 1)
 
 	//network channels
@@ -80,19 +83,20 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 	if firstTimeRunning {
 		StatusChannel <- "First time running, starting normal init"
-		go driver.Driver(true, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
+		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initFloorChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 
-		elevator = <-initialElevatorStateChannel
+		//elevator = <-initialElevatorStateChannel
 		StatusChannel <- "Current floor on first init = " + strconv.Itoa(elevator.CurrentFloor)
 	} else {
 		StatusChannel <- "Not first time running, beginning recovery from last session"
 		StatusChannel <- "Current floor on init from backup process = " + strconv.Itoa(elevator.CurrentFloor)
 
 		// Run driver with startingPoint
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
+		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initFloorChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 	}
-
-	<-initIsFinished
+	//elevator = <-initialElevatorStateChannel
+	//<-initIsFinished
+	elevator.CurrentFloor = <-initFloorChannel
 
 	StatusChannel <- "Recovery/init done"
 	StatusChannel <- "IN ELEVATOR: Elevator currentFloor = " + strconv.Itoa(elevator.CurrentFloor) + " , direction = " + strconv.Itoa(int(elevator.Direction)) + ", State: " + strconv.Itoa(int(elevator.State))
@@ -106,19 +110,19 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel)
 	go fileHandler.BackupElevatorInfoToFile(backupChannel)
 
-	if !firstTimeRunning {
-		switch elevator.State {
-		case State_DoorOpen:
-			StatusChannel <- "On init not first time running, Door Open"
-			stop <- true
-			break
+	//if !firstTimeRunning {
+	switch elevator.State {
+	case State_DoorOpen:
+		StatusChannel <- "On init not first time running, Door Open"
+		stop <- true
+		break
 
-		case State_Idle:
-			break
-		case State_Moving:
-			break
-		}
+	case State_Idle:
+		break
+	case State_Moving:
+		break
 	}
+	//}
 
 	for {
 		StatusChannel <- "In main select: "
@@ -143,6 +147,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 						errorChannel <- "In buttonPushed-> State_Idle: Direction is zero"
 					}
 					setMovingDirectionChannel <- Dir(direction)
+					elevator.Direction = Dir(direction)
 					elevator.State = State_Moving
 
 					updateElevatorInfoChannel <- elevator
