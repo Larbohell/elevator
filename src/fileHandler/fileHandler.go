@@ -4,7 +4,8 @@ import . "elevator_type"
 import "time"
 import "os"
 import "fmt"
-import "strconv"
+
+//import "strconv"
 
 import . "statusHandler"
 
@@ -77,7 +78,6 @@ func Read() (ElevatorInfo, error) {
 		panic(err)
 	} else {
 		elevator.CurrentFloor = buf
-		StatusChannel <- "FileHandler, Read(): CurrentFloor = " + strconv.Itoa(elevator.CurrentFloor)
 	}
 
 	_, err = fmt.Fscanf(file, "%d\n", &buf)

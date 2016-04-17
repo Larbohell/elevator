@@ -3,9 +3,9 @@ package driver
 import . "elevator_type"
 import . "time"
 
-import . "statusHandler"
+//import . "statusHandler"
 
-import "strconv"
+//import "strconv"
 
 // Make all driver funcs except Driver() lowercase
 
@@ -29,7 +29,6 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 				if floor != -1 {
 					elevator.CurrentFloor = floor
 					elevator.State = State_Idle
-					StatusChannel <- "in doInit, currentFloor hit floor, currentFloor = " + strconv.Itoa(elevator.CurrentFloor)
 					Elevator_set_motor_direction(MOTOR_DIRECTION_STOP)
 					break loop
 				}
@@ -95,7 +94,6 @@ func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel c
 			Elevator_set_door_open_lamp(0)
 			//StatusChannel <- "IN DRIVER, openDoorChannel, door lamp should be off"
 			doorClosedChannel <- true
-			StatusChannel <- "---------------------------------- Door close signal sent from driver"
 
 		case floor := <-floorSensorChannel:
 			//StatusChannel <- "IN DRIVER: floorSensorChannel = " + strconv.Itoa(floor)

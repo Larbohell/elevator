@@ -67,23 +67,16 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 	elevator = startingPoint
 
 	if firstTimeRunning {
-		StatusChannel <- "First time running, starting normal init"
 		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 
 		//elevator = <-initialElevatorStateChannel
-		StatusChannel <- "Current floor on first init = " + strconv.Itoa(elevator.CurrentFloor)
 	} else {
-		StatusChannel <- "Not first time running, beginning recovery from last session"
-		StatusChannel <- "Current floor on init from backup process = " + strconv.Itoa(elevator.CurrentFloor)
 
 		// Run driver with startingPoint
 		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 	}
 
 	elevator = <-initialElevatorStateChannel
-
-	StatusChannel <- "Recovery/init done"
-	StatusChannel <- "IN ELEVATOR: Elevator currentFloor = " + strconv.Itoa(elevator.CurrentFloor) + " , direction = " + strconv.Itoa(int(elevator.Direction)) + ", State: " + strconv.Itoa(int(elevator.State))
 
 	updateElevatorInfoChannel <- elevator
 	backupChannel <- elevator
@@ -95,7 +88,6 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 	switch elevator.State {
 	case State_DoorOpen:
-		StatusChannel <- "On init not first time running, Door Open"
 		stop <- true
 		break
 
@@ -115,7 +107,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 			switch elevator.State {
 
 			case State_Idle:
-				StatusChannel <- strconv.Itoa(counter) + ": State: Idle\n"
+				//StatusChannel <- strconv.Itoa(counter) + ": State: Idle\n"
 				//elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
 				if elevator.CurrentFloor != buttonPushed.Floor {
 
@@ -134,7 +126,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 					updateElevatorInfoChannel <- elevator
 				} else {
-					StatusChannel <- strconv.Itoa(counter) + ": Elevator Idle in same floor as button pushed"
+					//StatusChannel <- strconv.Itoa(counter) + ": Elevator Idle in same floor as button pushed"
 					if buttonPushed.Button != BUTTON_INSIDE_COMMAND {
 						orderCompletedByThisElevatorChannel <- buttonPushed
 					}
@@ -143,7 +135,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 				backupChannel <- elevator
 
 			case State_Moving:
-				StatusChannel <- strconv.Itoa(counter) + ": State: Moving\n"
+				//StatusChannel <- strconv.Itoa(counter) + ": State: Moving\n"
 				elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
 
 				updateElevatorInfoChannel <- elevator
@@ -151,7 +143,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 			case State_DoorOpen:
 				//TODO: If button pushed in same floor, do stop. When button pushed and Door open, button light doesn't turn on until door is closed
-				StatusChannel <- strconv.Itoa(counter) + ": State: DoorOpen\n"
+				//StatusChannel <- strconv.Itoa(counter) + ": State: DoorOpen\n"
 				//elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
 				/*
 					if elevator.CurrentFloor != buttonPushed.Floor {
@@ -191,9 +183,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 					button.Button = BUTTON_OUTSIDE_UP
 					button.Floor = elevator.CurrentFloor
 					button.Value = 1
-					StatusChannel <- "1"
 					orderCompletedByThisElevatorChannel <- button
-					StatusChannel <- "2"
 				}
 				if elevator.Requests[elevator.CurrentFloor][int(BUTTON_OUTSIDE_DOWN)] == 1 {
 					var button ButtonInfo
@@ -201,30 +191,24 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 					button.Floor = elevator.CurrentFloor
 					button.Value = 1
 
-					StatusChannel <- "3"
 					orderCompletedByThisElevatorChannel <- button
-					StatusChannel <- "4"
 				}
 			}
 
 			clearButtonLightsAtFloorChannel <- elevator.CurrentFloor
 			openDoorChannel <- true
 			//elevator.State = State_Idle
-			StatusChannel <- "after openDoorChannel done"
+			//StatusChannel <- "after openDoorChannel done"
 
 			elevator.State = State_DoorOpen
 
 			elevator = orderHandler.ClearAtCurrentFloor(elevator)
-			StatusChannel <- "After ClearAtCurrentFloor"
+			//StatusChannel <- "After ClearAtCurrentFloor"
 
-			StatusChannel <- "5"
 			updateElevatorInfoChannel <- elevator
-			StatusChannel <- "6"
 			backupChannel <- elevator
-			StatusChannel <- "At end of shouldOpenDoor / stop"
 
 		case <-doorClosedChannel:
-			StatusChannel <- "	-----------------------------------------doorClosedChannel"
 
 			elevator.Direction = orderHandler.Requests_chooseDirection(elevator)
 			setMovingDirectionChannel <- elevator.Direction
@@ -237,7 +221,6 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 			updateElevatorInfoChannel <- elevator
 			backupChannel <- elevator
-			StatusChannel <- "10"
 
 		case arrivedAtFloor := <-arrivedAtFloorChannel:
 			StatusChannel <- "	arrivedAtFloorChannel"

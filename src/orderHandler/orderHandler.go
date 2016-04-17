@@ -9,7 +9,7 @@ import . "strconv"
 
 func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan ButtonInfo, addToRequestsChannel chan ButtonInfo, externalOrderChannel chan ButtonInfo) {
 	counter := 0
-	StatusChannel <- Itoa(counter) + ":In OrderHandler"
+	//StatusChannel <- Itoa(counter) + ":In OrderHandler"
 
 	for {
 		select {
@@ -24,7 +24,7 @@ func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan Butto
 				// Inform master, master handles order and adds to one of the elevator's queues
 				StatusChannel <- Itoa(counter) + ": Button pushed = EXTERNAL"
 				externalOrderChannel <- addOrder
-				StatusChannel <- Itoa(counter) + ": Button pushed = EXTERNAL and put to EXTERNALORDERCHANNEL"
+				//StatusChannel <- Itoa(counter) + ": Button pushed = EXTERNAL and put to EXTERNALORDERCHANNEL"
 			}
 		}
 	}

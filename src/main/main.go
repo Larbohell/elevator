@@ -8,7 +8,7 @@ import . "elevator_type"
 import . "statusHandler"
 import "fileHandler"
 
-import "strconv"
+//import "strconv"
 
 import "flag"
 import "os/exec"
@@ -35,12 +35,12 @@ func main() {
 	go Error_handler(errorChannel)
 	go Status_handler()
 
-	StatusChannel <- "Backup is here"
+	//StatusChannel <- "Backup is here"
 	for {
 		if primary {
 			spawn_backup()
 			startingPoint, _ = fileHandler.Read()
-			StatusChannel <- "IN main.go, backup is about to be primary: Elevator currentFloor = " + strconv.Itoa(startingPoint.CurrentFloor) + " , direction = " + strconv.Itoa(int(startingPoint.Direction)) + ", State: " + strconv.Itoa(int(startingPoint.State))
+			//StatusChannel <- "IN main.go, backup is about to be primary: Elevator currentFloor = " + strconv.Itoa(startingPoint.CurrentFloor) + " , direction = " + strconv.Itoa(int(startingPoint.Direction)) + ", State: " + strconv.Itoa(int(startingPoint.State))
 			elevator.Run_elevator(firstTimeRunning, startingPoint, errorChannel)
 
 		} else {
@@ -87,7 +87,7 @@ func listenToPrimary() ElevatorInfo {
 				StatusChannel <- "Error in listenToPrimary: Timeout, error: " + err.Error()
 				panic(err)
 			}
-			StatusChannel <- "In backup timeout (primary dead), CurrentFloor from file read = " + strconv.Itoa(elevator.CurrentFloor)
+			//StatusChannel <- "In backup timeout (primary dead), CurrentFloor from file read = " + strconv.Itoa(elevator.CurrentFloor)
 			return elevator
 
 		}
