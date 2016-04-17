@@ -223,6 +223,7 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 				} else if messageFromMaster.MessageTo == BROADCAST_IP {
 					StatusChannel <- "		new updated uncompletedExternalOrderList received from master"
 					uncompletedExternalOrders = messageFromMaster.UncompletedExternalOrders
+					StatusChannel <- "		uncompletedExternalOrders updated"
 					uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders
 					StatusChannel <- "		Slave should update lights based on unCompletedExternalOrders list"
 
@@ -423,6 +424,8 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 			//Update uncompletedExternalOrders in all slaves
 
 			uncompletedExternalOrders[newExternalOrder.Floor][newExternalOrder.Button] = bestElevatorIP
+			uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders //Update own lights
+
 			msgToSlaves := Message{true, false, true, false, false, masterIP, BROADCAST_IP, elevator, newExternalOrder, uncompletedExternalOrders}
 			SendUdpMessage(msgToSlaves)
 			StatusChannel <- strconv.Itoa(counter) + ": END OF EXTERNALORDERCHANNEL"

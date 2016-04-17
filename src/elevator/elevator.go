@@ -100,7 +100,10 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 		case buttonPushed := <-addToRequestsChannel:
 			counter++
 			StatusChannel <- strconv.Itoa(counter) + ": addToRequestsChannel"
-			setButtonLightChannel <- buttonPushed
+			if buttonPushed.Button == BUTTON_INSIDE_COMMAND {
+				setButtonLightChannel <- buttonPushed
+			}
+
 			switch elevator.State {
 
 			case State_Idle:
@@ -204,9 +207,10 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 			updateElevatorInfoChannel <- elevator
 			backupChannel <- elevator
+			StatusChannel <- "stop case DONE"
 
 		case <-doorClosedChannel:
-
+			StatusChannel <- "	doorClosedChannel"
 			elevator.Direction = orderHandler.Requests_chooseDirection(elevator)
 			setMovingDirectionChannel <- elevator.Direction
 
@@ -215,9 +219,11 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 			} else {
 				elevator.State = State_Idle
 			}
-
+			StatusChannel <- "1"
 			updateElevatorInfoChannel <- elevator
+			StatusChannel <- "2"
 			backupChannel <- elevator
+			StatusChannel <- "3"
 
 		case arrivedAtFloor := <-arrivedAtFloorChannel:
 			StatusChannel <- "	arrivedAtFloorChannel"
