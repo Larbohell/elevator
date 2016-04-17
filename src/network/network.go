@@ -12,18 +12,19 @@ import "orderHandler"
 import . "statusHandler"
 
 import "math/rand"
-import "fmt"
+
+//import "fmt"
 
 //import . "errorHandler"
 
-const PORT string = ":17441"
+const PORT string = ":24241"
 const PORT_FOR_BACKUP_PROCESS string = ":11114"
 
 const BROADCAST_IP string = "129.241.187.255"
 
 //func recieveUdpMessage(master bool, responseChannel chan source.Message, terminate chan bool, terminated chan int){
 func ReceiveUdpMessage(receivedUdpMessageChannel chan Message, localIP string, terminateThreadChannel chan bool, threadIsTerminatedChannel chan bool) {
-	StatusChannel <- "In ReceiveUdpMessage function, localIP: " + localIP
+	//StatusChannel <- "In ReceiveUdpMessage function, localIP: " + localIP
 
 	buffer := make([]byte, 4098)
 	//raddr, err := net.ResolveUDPAddr("udp", ":26969")	// Master port
@@ -69,7 +70,7 @@ func ReceiveUdpMessage(receivedUdpMessageChannel chan Message, localIP string, t
 
 func ReceiveUdpMessageOnOwnIP(receivedUdpMessageChannel chan Message, terminateThreadChannel chan bool, threadIsTerminatedChannel chan bool) {
 	localIP := findLocalIPAddress()
-	StatusChannel <- "In ReceiveUdpMessageOnOwnIP function, localIP: " + localIP
+	//StatusChannel <- "In ReceiveUdpMessageOnOwnIP function, localIP: " + localIP
 
 	buffer := make([]byte, 4098)
 	//raddr, err := net.ResolveUDPAddr("udp", ":26969")	// Master port
@@ -310,29 +311,30 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 		case elevator = <-updateElevatorInfoChannel:
 
 			masterElevatorInfoChannel <- elevator
-			StatusChannel <- "---------------------------------------Master elevator info updated"
+			/*
+				StatusChannel <- "---------------------------------------Master elevator info updated"
 
-			fmt.Printf("\n")
+				fmt.Printf("\n")
 
-			fmt.Printf("  +--------------------+\n")
-			fmt.Printf("  |  | up  | dn  | cab |\n")
-			for f := N_FLOORS - 1; f >= 0; f-- {
-				fmt.Printf("  | %d", f)
-				for btn := 0; btn < N_BUTTONS; btn++ {
-					if f == N_FLOORS-1 && btn == int(BUTTON_OUTSIDE_UP) || f == 0 && btn == int(BUTTON_OUTSIDE_DOWN) {
-						fmt.Printf("|     ")
-					} else {
-						if elevator.Requests[f][btn] == 1 {
-							fmt.Printf("|  #  ")
+				fmt.Printf("  +--------------------+\n")
+				fmt.Printf("  |  | up  | dn  | cab |\n")
+				for f := N_FLOORS - 1; f >= 0; f-- {
+					fmt.Printf("  | %d", f)
+					for btn := 0; btn < N_BUTTONS; btn++ {
+						if f == N_FLOORS-1 && btn == int(BUTTON_OUTSIDE_UP) || f == 0 && btn == int(BUTTON_OUTSIDE_DOWN) {
+							fmt.Printf("|     ")
 						} else {
-							fmt.Printf("|  -  ")
+							if elevator.Requests[f][btn] == 1 {
+								fmt.Printf("|  #  ")
+							} else {
+								fmt.Printf("|  -  ")
+							}
 						}
 					}
+					fmt.Printf("|\n")
 				}
-				fmt.Printf("|\n")
-			}
-			fmt.Printf("  +--------------------+\n")
-
+				fmt.Printf("  +--------------------+\n")
+			*/
 			statusMessageToSlave = Message{true, false, false, false, false, masterIP, BROADCAST_IP, elevator, ButtonInfo{0, 0, 0}, uncompletedExternalOrders}
 			SendUdpMessage(statusMessageToSlave)
 

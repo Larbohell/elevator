@@ -2,9 +2,11 @@ package main
 
 import "elevator"
 import . "elevator_type"
-import "network"
+
+//import "network"
 
 import . "statusHandler"
+import "fileHandler"
 
 import "strconv"
 
@@ -19,7 +21,14 @@ func main() {
 	flag.BoolVar(&primary, "primary", true, "Determines if process is primary or backup")
 	flag.Parse()
 
-	var startingPoint Message // The information we want to transfer from primary to backup
+	var startingPoint ElevatorInfo // The information we wanerr.Errort to transfer from primary to backup
+	var firstTimeRunning bool
+	if primary {
+		firstTimeRunning = true
+	} else {
+		firstTimeRunning = false
+	}
+
 	errorChannel := make(chan string, 1)
 	StatusChannel = make(chan string, 1)
 
@@ -31,33 +40,12 @@ func main() {
 		if primary {
 			spawn_backup()
 
-			StatusChannel <- "IN MAIN: Elevator currentFloor = " + strconv.Itoa(startingPoint.ElevatorInfo.CurrentFloor) + " , direction = " + strconv.Itoa(int(startingPoint.ElevatorInfo.Direction)) + ", State: " + strconv.Itoa(int(startingPoint.ElevatorInfo.State))
-			/*
-				fmt.Printf("\n")
-
-				fmt.Printf("  +--------------------+\n")
-				fmt.Printf("  |  | up  | dn  | cab |\n")
-				for f := N_FLOORS - 1; f >= 0; f-- {
-					fmt.Printf("  | %d", f)
-					for btn := 0; btn < N_BUTTONS; btn++ {
-						if f == N_FLOORS-1 && btn == int(BUTTON_OUTSIDE_UP) || f == 0 && btn == int(BUTTON_OUTSIDE_DOWN) {
-							fmt.Printf("|     ")
-						} else {
-							if startingPoint.ElevatorInfo.Requests[f][btn] == 1 {
-								fmt.Printf("|  #  ")
-							} else {
-								fmt.Printf("|  -  ")
-							}
-						}
-					}
-					fmt.Printf("|\n")
-				}
-				fmt.Printf("  +--------------------+\n")
-			*/
-			elevator.Run_elevator(startingPoint, errorChannel)
+			StatusChannel <- "IN main.go, backup is about to be primary: Elevator currentFloor = " + strconv.Itoa(startingPoint.CurrentFloor) + " , direction = " + strconv.Itoa(int(startingPoint.Direction)) + ", State: " + strconv.Itoa(int(startingPoint.State))
+			elevator.Run_elevator(firstTimeRunning, startingPoint, errorChannel)
 
 		} else {
 			fmt.Println("Backup process started")
+			//startingPoint = listenToPrimary()
 			startingPoint = listenToPrimary()
 			primary = true
 		}
@@ -70,28 +58,37 @@ func spawn_backup() {
 	//CheckError(err)
 }
 
-func listenToPrimary() Message {
+func listenToPrimary() ElevatorInfo {
 
-	messageFromPrimaryChannel := make(chan Message, 1)
+	//messageFromPrimaryChannel := make(chan Message, 1)
 	terminateThreadChannel := make(chan bool, 1)
 	threadIsTerminatedChannel := make(chan bool, 1)
-	var messageFromPrimary Message
+	//var messageFromPrimary Message
+	backupFileChangedChannel := make(chan bool, 1)
 
-	go network.ReceiveUdpMessageOnOwnIP(messageFromPrimaryChannel, terminateThreadChannel, threadIsTerminatedChannel)
+	//go network.ReceiveUdpMessageOnOwnIP(messageFromPrimaryChannel, terminateThreadChannel, threadIsTerminatedChannel)
+	go fileHandler.BackupFileChanged(backupFileChangedChannel, terminateThreadChannel, threadIsTerminatedChannel)
 	for {
 		select {
+		/*
+			case messageFromPrimary = <-messageFromPrimaryChannel:
+				fmt.Println("Primary alive")
+				break
+		*/
 
-		case messageFromPrimary = <-messageFromPrimaryChannel:
-			fmt.Println("Primary alive")
-			break
+		case <-backupFileChangedChannel:
+			//StatusChannel <- "In backup process: Primary alive, backupFile Changed"
 
 		case <-time.After(1 * time.Second):
-			fmt.Println("Primary timeout")
 			terminateThreadChannel <- true
-			fmt.Println("Primary timeout")
 			<-threadIsTerminatedChannel
-			fmt.Println("Primary timeout")
-			return messageFromPrimary
+			elevator, err := fileHandler.Read()
+			if err != nil {
+				StatusChannel <- "Error in listenToPrimary: Timeout, error: " + err.Error()
+				panic(err)
+			}
+			StatusChannel <- "In backup timeout (primary dead), CurrentFloor from file read = " + strconv.Itoa(elevator.CurrentFloor)
+			return elevator
 
 		}
 	}
