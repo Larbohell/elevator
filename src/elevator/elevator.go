@@ -188,13 +188,15 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 				button.Button = BUTTON_OUTSIDE_UP
 				button.Floor = elevator.CurrentFloor
 				button.Value = 1
-				orderCompletedByThisElevatorChannel <- button
 
+				orderCompletedByThisElevatorChannel <- button
+				StatusChannel <- "In Stop, orderCompletedByThisElevatorChannel BUTTON OUTSIDE UP -----------first one"
 				button.Button = BUTTON_OUTSIDE_DOWN
 				button.Floor = elevator.CurrentFloor
 				button.Value = 1
 
 				orderCompletedByThisElevatorChannel <- button
+				StatusChannel <- "In Stop, orderCompletedByThisElevatorChannel BUTTON OUTSIDE DOWN -----------first one"
 
 			}
 
