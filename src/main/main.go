@@ -11,8 +11,9 @@ import "fileHandler"
 //import "strconv"
 
 import "flag"
+import "os"
 import "os/exec"
-import "time"
+import . "time"
 
 import "fmt"
 
@@ -25,15 +26,17 @@ func main() {
 
 	errorChannel := make(chan string, 1)
 	StatusChannel = make(chan string, 1)
+	programAliveChannel := make(chan bool, 1)
 
 	go Error_handler(errorChannel)
 	go Status_handler()
 
 	for {
 		if primary {
+			go exitProgramIfTimeout(programAliveChannel)
 			spawn_backup()
 			startingPoint, _ = fileHandler.Read()
-			elevator.Run_elevator(startingPoint, errorChannel)
+			elevator.Run_elevator(startingPoint, errorChannel, programAliveChannel)
 
 		} else {
 			fmt.Println("Backup process started")
@@ -59,7 +62,7 @@ func listenToPrimary() ElevatorInfo {
 		select {
 		case <-backupFileChangedChannel:
 
-		case <-time.After(1 * time.Second):
+		case <-After(1 * Second):
 			terminateThreadChannel <- true
 			<-threadIsTerminatedChannel
 
@@ -70,6 +73,17 @@ func listenToPrimary() ElevatorInfo {
 			}
 
 			return elevator
+		}
+	}
+}
+
+func exitProgramIfTimeout(programAliveChannel chan bool) {
+	for {
+		select {
+		case <-programAliveChannel:
+			break
+		case <-After(5 * Second):
+			os.Exit(1)
 		}
 	}
 }

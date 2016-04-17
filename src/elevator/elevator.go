@@ -10,12 +10,7 @@ import "fileHandler"
 
 import "strconv"
 
-//TODO!!!
-
-// Light syncing is buggy
-// On init: Check floor signal and compare with CUrrentFloor from file (elevator sometimes thinks it's somewhere else after init)
-
-func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string) {
+func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string, programAliveChannel chan bool) {
 
 	var elevator ElevatorInfo
 	var uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string
@@ -134,6 +129,7 @@ func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string) {
 				updateElevatorInfoChannel <- elevator
 				backupChannel <- elevator
 			}
+			programAliveChannel <- true
 
 		case <-stop:
 			StatusChannel <- "	stop"
@@ -164,6 +160,7 @@ func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string) {
 
 			updateElevatorInfoChannel <- elevator
 			backupChannel <- elevator
+			programAliveChannel <- true
 
 		case <-doorClosedChannel:
 			StatusChannel <- "	doorClosedChannel"
@@ -177,6 +174,7 @@ func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string) {
 			}
 			updateElevatorInfoChannel <- elevator
 			backupChannel <- elevator
+			programAliveChannel <- true
 
 		case arrivedAtFloor := <-arrivedAtFloorChannel:
 			StatusChannel <- "	arrivedAtFloorChannel"
@@ -202,6 +200,7 @@ func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string) {
 
 			updateElevatorInfoChannel <- elevator
 			backupChannel <- elevator
+			programAliveChannel <- true
 
 		case uncompletedExternalOrders := <-uncompletedExternalOrdersMatrixChangedChannel:
 			StatusChannel <- "uncompletedExternalOrderMatrixChangedChannel"
@@ -221,6 +220,7 @@ func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string) {
 					StatusChannel <- "Updated light, floor: " + strconv.Itoa(floor) + "; button: " + strconv.Itoa(btn) + "; Value: " + strconv.Itoa(button.Value)
 				}
 			}
+			programAliveChannel <- true
 		}
 	}
 }
