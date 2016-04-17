@@ -215,7 +215,7 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 			//StatusChannel <- "		AcknowledgeMessage sent to master"
 
 			if messageFromMaster.NewOrder {
-				StatusChannel <- "		NewOrder from master"
+				//StatusChannel <- "		NewOrder from master"
 				if messageFromMaster.MessageTo == slaveIP {
 					StatusChannel <- "		Order is given to slave by master"
 					addToRequestsChannel <- messageFromMaster.ButtonInfo
@@ -374,7 +374,7 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 			} else if receivedMessage.OrderCompleted {
 				StatusChannel <- "			Ordercompleted in Master"
 				orderCompletedChannel <- receivedMessage.ButtonInfo
-				uncompletedExternalOrders[receivedMessage.ButtonInfo.Floor][receivedMessage.ButtonInfo.Button] = ""
+				uncompletedExternalOrders[receivedMessage.ButtonInfo.Floor][int(receivedMessage.ButtonInfo.Button)] = ""
 				msgToSlave := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, receivedMessage.ButtonInfo, uncompletedExternalOrders}
 				SendUdpMessage(msgToSlave)
 

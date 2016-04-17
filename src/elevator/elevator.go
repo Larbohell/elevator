@@ -265,7 +265,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 					}
 
 					setButtonLightChannel <- button
-					StatusChannel <- "Updated light, floor: " + strconv.Itoa(floor) + "; button: " + strconv.Itoa(btn)
+					StatusChannel <- "Updated light, floor: " + strconv.Itoa(floor) + "; button: " + strconv.Itoa(btn) + "; to value: " + strconv.Itoa(button.Value)
 				}
 			}
 
