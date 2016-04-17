@@ -9,7 +9,7 @@ import "strconv"
 
 // Make all driver funcs except Driver() lowercase
 
-func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, initIsFinished chan bool) {
+func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo) {
 	Elevator_c_init()
 
 	go read_floor_sensor(floorSensorChannel)
@@ -57,10 +57,11 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 	initialElevatorStateChannel <- elevator
 }
 
-func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, openDoorChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, initIsFinished chan bool, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
+func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, openDoorChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
 	floorSensorChannel := make(chan int, 1)
-	elevator_init(doInit, startingPoint, floorSensorChannel, errorChannel, initialElevatorStateChannel, initIsFinished)
+	elevator_init(doInit, startingPoint, floorSensorChannel, errorChannel, initialElevatorStateChannel)
 
+	go lightsHandler(setButtonLightChannel, clearButtonLightsAtFloorChannel)
 	go read_buttons(newOrderChannel)
 
 	for {
@@ -80,14 +81,7 @@ func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel c
 			Elevator_set_door_open_lamp(0)
 			//StatusChannel <- "IN DRIVER, openDoorChannel, door lamp should be off"
 			doorClosedChannel <- true
-
-		case buttonInfo := <-setButtonLightChannel:
-			Elevator_set_button_lamp(buttonInfo.Button, buttonInfo.Floor, buttonInfo.Value)
-
-		case floor := <-clearButtonLightsAtFloorChannel:
-			for btn := 0; btn < N_BUTTONS; btn++ {
-				Elevator_set_button_lamp(Button(btn), floor, 0)
-			}
+			StatusChannel <- "---------------------------------- Door close signal sent from driver"
 
 		case floor := <-floorSensorChannel:
 			//StatusChannel <- "IN DRIVER: floorSensorChannel = " + strconv.Itoa(floor)
@@ -98,6 +92,20 @@ func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel c
 				//StatusChannel <- "Arrived at floor: " + strconv.Itoa(floor)
 
 				//StatusChannel <- "Floor: " + strconv.Itoa(floor)
+			}
+		}
+	}
+}
+
+func lightsHandler(setButtonLightChannel chan ButtonInfo, clearButtonLightsAtFloorChannel chan int) {
+	for {
+		select {
+		case buttonInfo := <-setButtonLightChannel:
+			Elevator_set_button_lamp(buttonInfo.Button, buttonInfo.Floor, buttonInfo.Value)
+
+		case floor := <-clearButtonLightsAtFloorChannel:
+			for btn := 0; btn < N_BUTTONS; btn++ {
+				Elevator_set_button_lamp(Button(btn), floor, 0)
 			}
 		}
 	}
