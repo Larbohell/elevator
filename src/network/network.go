@@ -305,7 +305,8 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 				button.Value = 1
 
 				//Obsolete, put on newExternalOrder
-				go orderWatchdog(uncompletedExternalOrders[floor][btn], button, slaveIsAliveIPChannel, externalOrderFromDeadSlaveChannel, orderCompletedChannel)
+				externalOrderChannel <- button
+				//go orderWatchdog(uncompletedExternalOrders[floor][btn], button, slaveIsAliveIPChannel, externalOrderFromDeadSlaveChannel, orderCompletedChannel)
 
 			}
 		}
@@ -420,7 +421,7 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 			//Update uncompletedExternalOrders in all slaves
 
 			uncompletedExternalOrders[newExternalOrder.Floor][newExternalOrder.Button] = bestElevatorIP
-			msgToSlaves := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, newExternalOrder, uncompletedExternalOrders}
+			msgToSlaves := Message{true, false, true, false, false, masterIP, BROADCAST_IP, elevator, newExternalOrder, uncompletedExternalOrders}
 			SendUdpMessage(msgToSlaves)
 			StatusChannel <- strconv.Itoa(counter) + ": END OF EXTERNALORDERCHANNEL"
 
