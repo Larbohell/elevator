@@ -551,7 +551,7 @@ func orderWatchdog(slaveIP string, button ButtonInfo, slaveIsAliveIPChannel chan
 
 			//////////////////////////////////// IMPORTANTE //////////////////////////////////
 			if receivedSlaveIP == slaveIP {
-				StatusChannel <- "Received ALIVE from slave"
+				//StatusChannel <- "Received ALIVE from slave"
 				break
 			} else {
 				slaveIsAliveIPChannel <- receivedSlaveIP

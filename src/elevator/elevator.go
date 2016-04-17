@@ -107,6 +107,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 			switch elevator.State {
 
 			case State_Idle:
+				StatusChannel <- "Case State_Idle"
 				//StatusChannel <- strconv.Itoa(counter) + ": State: Idle\n"
 				//elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
 				if elevator.CurrentFloor != buttonPushed.Floor {
@@ -138,6 +139,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 				backupChannel <- elevator
 
 			case State_Moving:
+				StatusChannel <- "Case State Moving"
 				//StatusChannel <- strconv.Itoa(counter) + ": State: Moving\n"
 				elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
 
@@ -145,6 +147,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 				backupChannel <- elevator
 
 			case State_DoorOpen:
+				StatusChannel <- "Case State_DoorOpen"
 				//TODO: If button pushed in same floor, do stop. When button pushed and Door open, button light doesn't turn on until door is closed
 				//StatusChannel <- strconv.Itoa(counter) + ": State: DoorOpen\n"
 				//elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
@@ -187,6 +190,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 					button.Floor = elevator.CurrentFloor
 					button.Value = 1
 					orderCompletedByThisElevatorChannel <- button
+					StatusChannel <- "In Stop, orderCompletedByThisElevatorChannel BUTTON OUTSIDE UP"
 				}
 				if elevator.Requests[elevator.CurrentFloor][int(BUTTON_OUTSIDE_DOWN)] == 1 {
 					var button ButtonInfo
@@ -195,6 +199,8 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 					button.Value = 1
 
 					orderCompletedByThisElevatorChannel <- button
+					StatusChannel <- "In Stop, orderCompletedByThisElevatorChannel BUTTON OUTSIDE DOWN"
+
 				}
 			}
 
