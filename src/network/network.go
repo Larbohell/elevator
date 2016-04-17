@@ -224,6 +224,7 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 					StatusChannel <- "		new updated uncompletedExternalOrderList received from master"
 					uncompletedExternalOrders = messageFromMaster.UncompletedExternalOrders
 					uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders
+					StatusChannel <- "		Slave should update lights based on unCompletedExternalOrders list"
 
 				}
 

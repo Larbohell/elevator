@@ -24,8 +24,6 @@ import "strconv"
 // Light syncing is buggy
 // On init: Check floor signal and compare with CUrrentFloor from file (elevator sometimes thinks it's somewhere else after init)
 
-// LOOK AT ORDERWATCHDOG!!!!!!!!!!!!!!!!!
-
 func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChannel chan string) {
 
 	var elevator ElevatorInfo
@@ -247,7 +245,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 			backupChannel <- elevator
 
 		case uncompletedExternalOrders := <-uncompletedExternalOrdersMatrixChangedChannel: //change to updateExtLightsChannel
-
+			StatusChannel <- "uncompletedExternalOrderMatrixChangedChannel"
 			for floor := 0; floor < N_FLOORS; floor++ {
 				for btn := 0; btn < N_BUTTONS-1; btn++ {
 					var button ButtonInfo
@@ -261,8 +259,10 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 					}
 
 					setButtonLightChannel <- button
+					StatusChannel <- "Updated light, floor: " + strconv.Itoa(floor) + "; button: " + strconv.Itoa(btn)
 				}
 			}
+
 		}
 	}
 }
