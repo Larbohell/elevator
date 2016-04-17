@@ -208,6 +208,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 			}
 
 			clearButtonLightsAtFloorChannel <- elevator.CurrentFloor
+			StatusChannel <- "CLEAR LIGHTS"
 			openDoorChannel <- true
 			//elevator.State = State_Idle
 			StatusChannel <- "after openDoorChannel done"
