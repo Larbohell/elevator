@@ -5,12 +5,8 @@ import . "statusHandler"
 
 import . "strconv"
 
-//import "math"
-
 func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan ButtonInfo, addToRequestsChannel chan ButtonInfo, externalOrderChannel chan ButtonInfo) {
 	counter := 0
-	//StatusChannel <- Itoa(counter) + ":In OrderHandler"
-
 	for {
 		select {
 		case addOrder := <-addOrderChannel:
@@ -21,10 +17,8 @@ func OrderHandler(addOrderChannel chan ButtonInfo, removeOrderChannel chan Butto
 				addToRequestsChannel <- addOrder
 			} else {
 				counter++
-				// Inform master, master handles order and adds to one of the elevator's queues
 				StatusChannel <- Itoa(counter) + ": Button pushed = EXTERNAL"
 				externalOrderChannel <- addOrder
-				//StatusChannel <- Itoa(counter) + ": Button pushed = EXTERNAL and put to EXTERNALORDERCHANNEL"
 			}
 		}
 	}
