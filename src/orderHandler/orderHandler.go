@@ -39,7 +39,7 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 		select {
 		case buttonInfo := <-findBestElevatorForTheJobChannel:
 
-			minValue := N_FLOORS
+			minValue := N_FLOORS * 2 // Max possible value of cost function + 1
 			var bestElevatorIP string
 
 			for slaveIP, elevator := range slavesAliveMap {
@@ -88,6 +88,33 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 }
 
 func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
+	var cost int
+
+	var directionToOrder Dir
+	distance := elevator.CurrentFloor - buttonInfo.Floor
+
+	// Abs
+	if distance < 0 {
+		distance = distance * -1
+		directionToOrder = Up
+	} else {
+		directionToOrder = Down
+	}
+
+	if elevator.Direction != Stop {
+		if directionToOrder != elevator.Direction {
+			cost += N_FLOORS
+		}
+	}
+	// Possible cost for door open state
+	cost += distance
+	StatusChannel <- "Distance = " + Itoa(distance) + " and directionToOrder = " + Itoa(int(directionToOrder)) + " and elevator.Direction = " + Itoa(int(elevator.Direction))
+	StatusChannel <- "Cost = " + Itoa(cost)
+	return cost
+}
+
+/*
+func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
 	distance := elevator.CurrentFloor - buttonInfo.Floor
 	// JallaAbs()
 	if distance < 0 {
@@ -95,3 +122,4 @@ func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
 	}
 	return distance
 }
+*/
