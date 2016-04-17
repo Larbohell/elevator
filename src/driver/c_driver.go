@@ -9,8 +9,6 @@ package driver
 import "C"
 import "elevator_type"
 
-//import "time"
-
 type Motor_direction int
 
 const (

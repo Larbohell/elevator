@@ -1,5 +1,3 @@
-
-
 #include "elevator.h"
 
 #include "channels.h"
@@ -26,8 +24,6 @@ static const int button_channel_matrix[N_FLOORS][N_BUTTONS] = {
     {BUTTON_UP4, BUTTON_DOWN4, BUTTON_COMMAND4},
 };
 
-
-
 void elev_init(void) {
     int init_success = io_init();
     assert(init_success && "Unable to initialize elevator hardware!");
@@ -43,7 +39,6 @@ void elev_init(void) {
     elev_set_floor_indicator(0);
 }
 
-
 void elev_set_motor_direction(elev_motor_direction_t dirn) {
     if (dirn == 0){
         io_write_analog(MOTOR, 0);
@@ -55,7 +50,6 @@ void elev_set_motor_direction(elev_motor_direction_t dirn) {
         io_write_analog(MOTOR, MOTOR_SPEED);
     }
 }
-
 
 void elev_set_button_lamp(elev_button_type_t button, int floor, int value) {
     assert(floor >= 0);
@@ -69,7 +63,6 @@ void elev_set_button_lamp(elev_button_type_t button, int floor, int value) {
         io_clear_bit(lamp_channel_matrix[floor][button]);
     }
 }
-
 
 void elev_set_floor_indicator(int floor) {
     assert(floor >= 0);
@@ -89,7 +82,6 @@ void elev_set_floor_indicator(int floor) {
     }    
 }
 
-
 void elev_set_door_open_lamp(int value) {
     if (value) {
         io_set_bit(LIGHT_DOOR_OPEN);
@@ -98,7 +90,6 @@ void elev_set_door_open_lamp(int value) {
     }
 }
 
-
 void elev_set_stop_lamp(int value) {
     if (value) {
         io_set_bit(LIGHT_STOP);
@@ -106,8 +97,6 @@ void elev_set_stop_lamp(int value) {
         io_clear_bit(LIGHT_STOP);
     }
 }
-
-
 
 int elev_get_button_signal(elev_button_type_t button, int floor) {
     assert(floor >= 0);
@@ -123,7 +112,6 @@ int elev_get_button_signal(elev_button_type_t button, int floor) {
     }    
 }
 
-
 int elev_get_floor_sensor_signal(void) {
     if (io_read_bit(SENSOR_FLOOR1)) {
         return 0;
@@ -138,11 +126,9 @@ int elev_get_floor_sensor_signal(void) {
     }
 }
 
-
 int elev_get_stop_signal(void) {
     return io_read_bit(STOP);
 }
-
 
 int elev_get_obstruction_signal(void) {
     return io_read_bit(OBSTRUCTION);
