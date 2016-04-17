@@ -8,52 +8,41 @@ import "orderHandler"
 import "network"
 import "fileHandler"
 
-//import "net"
-
-//import "fmt"
-
 import "strconv"
-
-//"129.241.187.156" = workspace 9
-//"129.24.187.159" = workspace 11
-//"129.24.187.152" = workspace 13
-//"129.24.187.158" = workspace 10
 
 //TODO!!!
 
 // Light syncing is buggy
 // On init: Check floor signal and compare with CUrrentFloor from file (elevator sometimes thinks it's somewhere else after init)
 
-func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChannel chan string) {
+func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string) {
 
 	var elevator ElevatorInfo
-	var uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string //Could be declared in Slave
+	var uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string
 
-	previousFloor := N_FLOORS + 1 // Impossible floor
+	previousFloor := N_FLOORS + 1
 
+	//Driver
 	setMovingDirectionChannel := make(chan Dir, 1)
 	openDoorChannel := make(chan bool, 1)
 	keepDoorOpenChannel := make(chan bool, 1)
 	setButtonLightChannel := make(chan ButtonInfo, 1)
 	clearButtonLightsAtFloorChannel := make(chan int, 1)
+	initialElevatorStateChannel := make(chan ElevatorInfo)
 
 	//Debugging
-
 	newOrderChannel := make(chan ButtonInfo, 1)
 	removeOrderChannel := make(chan ButtonInfo, 1)
 	arrivedAtFloorChannel := make(chan int, 1)
 
+	//orderHandler
 	addToRequestsChannel := make(chan ButtonInfo, 1)
 	stop := make(chan bool, 1)
-	initialElevatorStateChannel := make(chan ElevatorInfo)
 	doorClosedChannel := make(chan bool, 1)
 
 	//network channels
 	orderCompletedByThisElevatorChannel := make(chan ButtonInfo, 1)
-
-	//___________________________________________////////////////////////////////////////////////////////_____________________________
 	externalOrderChannel := make(chan ButtonInfo, N_FLOORS*2-2) //N_FLOORS*2-2 = number of external buttons
-	///////////////////////////////////////____________--------------------************************************************************
 
 	updateElevatorInfoChannel := make(chan ElevatorInfo, 1)
 	uncompletedExternalOrdersMatrixChangedChannel := make(chan [N_FLOORS][N_BUTTONS - 1]string, 1)
@@ -63,15 +52,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 	elevator = startingPoint
 
-	if firstTimeRunning {
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
-
-		//elevator = <-initialElevatorStateChannel
-	} else {
-
-		// Run driver with startingPoint
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
-	}
+	go driver.Driver(elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 
 	elevator = <-initialElevatorStateChannel
 
