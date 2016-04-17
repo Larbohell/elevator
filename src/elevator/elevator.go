@@ -76,18 +76,20 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 	//go Error_handler(errorChannel)
 	//go Status_handler()
 
+	elevator = startingPoint
+
 	if firstTimeRunning {
 		StatusChannel <- "First time running, starting normal init"
-		go driver.Driver(true, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
+		go driver.Driver(true, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 
 		elevator = <-initialElevatorStateChannel
 		StatusChannel <- "Current floor on first init = " + strconv.Itoa(elevator.CurrentFloor)
 	} else {
 		StatusChannel <- "Not first time running, beginning recovery from last session"
-		elevator = startingPoint
 		StatusChannel <- "Current floor on init from backup process = " + strconv.Itoa(elevator.CurrentFloor)
 
-		go driver.Driver(false, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
+		// Run driver with startingPoint
+		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 	}
 
 	<-initIsFinished
