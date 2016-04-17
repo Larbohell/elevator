@@ -127,9 +127,12 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 					updateElevatorInfoChannel <- elevator
 				} else {
 					//StatusChannel <- strconv.Itoa(counter) + ": Elevator Idle in same floor as button pushed"
+
+					/* !!!!!!!!!!!!!!!!!!!!!!!!!!!
 					if buttonPushed.Button != BUTTON_INSIDE_COMMAND {
 						orderCompletedByThisElevatorChannel <- buttonPushed
 					}
+					!!!!!!!!!!!!!!!!!!! */
 					stop <- true
 				}
 				backupChannel <- elevator
@@ -176,8 +179,8 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 		case <-stop:
 			StatusChannel <- "	stop"
-
-			if elevator.State == State_Moving {
+			//if elevator.State == State_Moving {
+			if elevator.State != State_DoorOpen {
 				if elevator.Requests[elevator.CurrentFloor][int(BUTTON_OUTSIDE_UP)] == 1 {
 					var button ButtonInfo
 					button.Button = BUTTON_OUTSIDE_UP

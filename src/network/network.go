@@ -207,11 +207,11 @@ func Slave(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateEl
 
 		case messageFromMaster := <-messageFromMasterChannel:
 			masterIP = messageFromMaster.MessageFrom
-			StatusChannel <- "		Updated masterIP = " + masterIP
+			//StatusChannel <- "		Updated masterIP = " + masterIP
 
 			msgToMaster := Message{false, true, false, false, false, slaveIP, masterIP, elevator, ButtonInfo{0, 0, 0}, uncompletedExternalOrders}
 			SendUdpMessage(msgToMaster)
-			StatusChannel <- "Message sent from slave to master, to IP: " + masterIP
+			//StatusChannel <- "Message sent from slave to master, to IP: " + masterIP
 			//StatusChannel <- "		AcknowledgeMessage sent to master"
 
 			if messageFromMaster.NewOrder {
