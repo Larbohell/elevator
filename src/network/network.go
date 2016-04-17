@@ -305,6 +305,7 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 				button.Value = 1
 
 				//Obsolete, put on newExternalOrder
+				uncompletedExternalOrders[floor][btn] = ""
 				externalOrderChannel <- button
 				//go orderWatchdog(uncompletedExternalOrders[floor][btn], button, slaveIsAliveIPChannel, externalOrderFromDeadSlaveChannel, orderCompletedChannel)
 
