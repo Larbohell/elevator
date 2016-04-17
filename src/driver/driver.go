@@ -9,7 +9,7 @@ import . "time"
 
 // Make all driver funcs except Driver() lowercase
 
-func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo) {
+func elevator_init(startingPoint ElevatorInfo, floorSensorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo) {
 	Elevator_c_init()
 
 	go read_floor_sensor(floorSensorChannel)
@@ -18,7 +18,13 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 
 	floor := <-floorSensorChannel
 
-	if floor == -1 && elevator.State != State_Moving {
+	// On a floor, but it doesn't match up with the floor loaded from startingPoint (backup file)
+	if (floor != -1 && floor != startingPoint.CurrentFloor){
+		elevator.CurrentFloor = floor
+	}
+
+	// Between floors but state is not State_Moving
+	if (floor == -1 && elevator.State != State_Moving) {
 		Elevator_set_motor_direction(MOTOR_DIRECTION_DOWN)
 
 	loop:
@@ -59,9 +65,9 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 	initialElevatorStateChannel <- elevator
 }
 
-func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, openDoorChannel chan bool, keepDoorOpenChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
+func Driver(startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, openDoorChannel chan bool, keepDoorOpenChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
 	floorSensorChannel := make(chan int, 1)
-	elevator_init(doInit, startingPoint, floorSensorChannel, errorChannel, initialElevatorStateChannel)
+	elevator_init(startingPoint, floorSensorChannel, errorChannel, initialElevatorStateChannel)
 
 	go lightsHandler(setButtonLightChannel, clearButtonLightsAtFloorChannel)
 	go read_buttons(newOrderChannel)

@@ -24,7 +24,7 @@ import "strconv"
 // Light syncing is buggy
 // On init: Check floor signal and compare with CUrrentFloor from file (elevator sometimes thinks it's somewhere else after init)
 
-func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChannel chan string) {
+func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string) {
 
 	var elevator ElevatorInfo
 	var uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string //Could be declared in Slave
@@ -62,16 +62,8 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 	backupChannel := make(chan ElevatorInfo, 1)
 
 	elevator = startingPoint
+	go driver.Driver(elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 
-	if firstTimeRunning {
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
-
-		//elevator = <-initialElevatorStateChannel
-	} else {
-
-		// Run driver with startingPoint
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
-	}
 
 	elevator = <-initialElevatorStateChannel
 

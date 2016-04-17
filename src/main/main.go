@@ -22,13 +22,7 @@ func main() {
 	flag.Parse()
 
 	var startingPoint ElevatorInfo // The information we wanerr.Errort to transfer from primary to backup
-	var firstTimeRunning bool
-	if primary {
-		firstTimeRunning = true
-	} else {
-		firstTimeRunning = false
-	}
-
+	
 	errorChannel := make(chan string, 1)
 	StatusChannel = make(chan string, 1)
 
@@ -41,7 +35,7 @@ func main() {
 			spawn_backup()
 			startingPoint, _ = fileHandler.Read()
 			//StatusChannel <- "IN main.go, backup is about to be primary: Elevator currentFloor = " + strconv.Itoa(startingPoint.CurrentFloor) + " , direction = " + strconv.Itoa(int(startingPoint.Direction)) + ", State: " + strconv.Itoa(int(startingPoint.State))
-			elevator.Run_elevator(firstTimeRunning, startingPoint, errorChannel)
+			elevator.Run_elevator(startingPoint, errorChannel)
 
 		} else {
 			fmt.Println("Backup process started")
