@@ -373,6 +373,14 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 
 			} else if receivedMessage.OrderCompleted {
 				StatusChannel <- "			Ordercompleted in Master"
+
+				// Empty orderCompletedChannel if not empty
+				select {
+				case <-orderCompletedChannel:
+					break
+				default:
+				}
+
 				orderCompletedChannel <- receivedMessage.ButtonInfo
 				uncompletedExternalOrders[receivedMessage.ButtonInfo.Floor][int(receivedMessage.ButtonInfo.Button)] = ""
 				msgToSlave := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, receivedMessage.ButtonInfo, uncompletedExternalOrders}

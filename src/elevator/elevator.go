@@ -182,6 +182,22 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 		case <-stop:
 			StatusChannel <- "	stop"
+
+			if elevator.State == State_Idle {
+				var button ButtonInfo
+				button.Button = BUTTON_OUTSIDE_UP
+				button.Floor = elevator.CurrentFloor
+				button.Value = 1
+				orderCompletedByThisElevatorChannel <- button
+
+				button.Button = BUTTON_OUTSIDE_DOWN
+				button.Floor = elevator.CurrentFloor
+				button.Value = 1
+
+				orderCompletedByThisElevatorChannel <- button
+
+			}
+
 			//if elevator.State == State_Moving {
 			if elevator.State != State_DoorOpen {
 				if elevator.Requests[elevator.CurrentFloor][int(BUTTON_OUTSIDE_UP)] == 1 {
