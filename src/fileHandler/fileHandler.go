@@ -53,10 +53,11 @@ func write(elevator ElevatorInfo) {
 }
 
 func Read() (ElevatorInfo, error) {
-
+	StatusChannel <- "1"
 	var elevator ElevatorInfo
 
 	file, err := os.Open(BACKUP_FILE_NAME)
+	StatusChannel <- "2"
 	if err != nil {
 		//StatusChannel <- err
 		return elevator, err
@@ -71,7 +72,7 @@ func Read() (ElevatorInfo, error) {
 	}()
 
 	var buf int
-
+	StatusChannel <- "3"
 	_, err = fmt.Fscanf(file, "%d\n", &buf)
 	if err != nil {
 		panic(err)
@@ -79,7 +80,7 @@ func Read() (ElevatorInfo, error) {
 		elevator.CurrentFloor = buf
 		StatusChannel <- "FileHandler, Read(): CurrentFloor = " + strconv.Itoa(elevator.CurrentFloor)
 	}
-
+	StatusChannel <- "4"
 	_, err = fmt.Fscanf(file, "%d\n", &buf)
 	if err != nil {
 		panic(err)
@@ -87,6 +88,7 @@ func Read() (ElevatorInfo, error) {
 		elevator.Direction = Dir(buf)
 	}
 
+	StatusChannel <- "5"
 	for floor := 0; floor < N_FLOORS; floor++ {
 		for btn := 0; btn < N_BUTTONS; btn++ {
 			_, err = fmt.Fscanf(file, "%d\n", &buf)
@@ -96,14 +98,14 @@ func Read() (ElevatorInfo, error) {
 			}
 		}
 	}
-
+	StatusChannel <- "6"
 	_, err = fmt.Fscanf(file, "%d\n", &buf)
 	if err != nil {
 		panic(err)
 	} else {
 		elevator.State = ElevatorState(buf)
 	}
-
+	StatusChannel <- "7"
 	return elevator, err
 }
 

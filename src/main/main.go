@@ -17,12 +17,22 @@ import "time"
 import "fmt"
 
 func main() {
+	StatusChannel <- "0"
 	var primary bool
 	flag.BoolVar(&primary, "primary", true, "Determines if process is primary or backup")
 	flag.Parse()
+	StatusChannel <- "a"
+	startingPoint, err := fileHandler.Read() // The information we wanerr.Errort to transfer from primary to backup
+	//var startingPoint ElevatorInfo
+	StatusChannel <- "b"
 
-	var startingPoint ElevatorInfo // The information we wanerr.Errort to transfer from primary to backup
+	if err != nil {
+		StatusChannel <- "Error in Read() in main.go: " + err.Error()
+		panic(err)
+	}
+
 	var firstTimeRunning bool
+
 	if primary {
 		firstTimeRunning = true
 	} else {
