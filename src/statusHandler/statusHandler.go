@@ -13,6 +13,7 @@ func Status_handler() {
 }
 
 func Error_handler(errorChannel chan string) {
+	// Should be declared global as StatusChannel
 	for {
 		errorMsg := <-errorChannel
 		Println("\x1b[31;1m" + errorMsg + "\x1b[0m" + "\n")

@@ -1,19 +1,15 @@
 package fileHandler
 
 import . "elevator_type"
+import . "statusHandler"
+
 import "time"
 import "os"
 import "fmt"
 
-//import "strconv"
-
-import . "statusHandler"
-
 const BACKUP_FILE_NAME string = "backup.txt"
 
-//func Write(numOfElevs int, numOfFloors int, length int, queue []int) {
 func write(elevator ElevatorInfo) {
-	//StatusChannel <- "Writing to backup file"
 	file, err := os.Create(BACKUP_FILE_NAME)
 	if err != nil {
 		StatusChannel <- "Error creating file '" + BACKUP_FILE_NAME + "'"
@@ -59,7 +55,6 @@ func Read() (ElevatorInfo, error) {
 
 	file, err := os.Open(BACKUP_FILE_NAME)
 	if err != nil {
-		//StatusChannel <- err
 		return elevator, err
 	}
 

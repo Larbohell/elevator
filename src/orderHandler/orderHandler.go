@@ -55,17 +55,10 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 				StatusChannel <- "ERROR: No elevator is best for the job"
 			}
 
-			//StatusChannel <- "Best IP for the job: " + bestElevatorIP
-			//StatusChannel <- "This elevator's distance to the requested floor is " + strconv.Itoa(minValue)
-			/*
-				StatusChannel <- strconv.Itoa(len(slavesAliveMap))
-				StatusChannel <- "Button pushed in floor: " + strconv.Itoa(buttonInfo.Floor)
-				elevatorIP := "129.241.187.159"
-			*/
 			thisIsTheBestElevatorChannel <- bestElevatorIP
 
 		case slavesAliveMap = <-slavesAliveMapIsChangedChannel:
-			break //update elevatorsAliveMap
+			break
 
 		case masterElevatorInfo = <-masterElevatorInfoChannel:
 			break
@@ -75,7 +68,6 @@ func BestElevatorForTheJob(findBestElevatorForTheJobChannel chan ButtonInfo, sla
 			threadIsTerminatedChannel <- true
 			StatusChannel <- "BestElevatorForTheJob is terminated"
 			return
-			//elevatorsAliveMap[masterIP] = masterElevatorInfo
 
 		}
 	}
@@ -87,7 +79,6 @@ func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
 	var directionToOrder Dir
 	distance := elevator.CurrentFloor - buttonInfo.Floor
 
-	// Abs
 	if distance < 0 {
 		distance = distance * -1
 		directionToOrder = Up
@@ -100,20 +91,8 @@ func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
 			cost += N_FLOORS
 		}
 	}
-	// Possible cost for door open state
 	cost += distance
 	StatusChannel <- "Distance = " + Itoa(distance) + " and directionToOrder = " + Itoa(int(directionToOrder)) + " and elevator.Direction = " + Itoa(int(elevator.Direction))
 	StatusChannel <- "Cost = " + Itoa(cost)
 	return cost
 }
-
-/*
-func costFunction(elevator ElevatorInfo, buttonInfo ButtonInfo) int {
-	distance := elevator.CurrentFloor - buttonInfo.Floor
-	// JallaAbs()
-	if distance < 0 {
-		distance = distance * -1
-	}
-	return distance
-}
-*/

@@ -25,22 +25,23 @@ func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string, programA
 	clearButtonLightsAtFloorChannel := make(chan int, 1)
 	initialElevatorStateChannel := make(chan ElevatorInfo)
 
-	//Debugging
+	//Orders
 	newOrderChannel := make(chan ButtonInfo, 1)
 	removeOrderChannel := make(chan ButtonInfo, 1)
-	arrivedAtFloorChannel := make(chan int, 1)
 
-	//orderHandler
+	//States
 	addToRequestsChannel := make(chan ButtonInfo, 1)
 	stop := make(chan bool, 1)
 	doorClosedChannel := make(chan bool, 1)
+	arrivedAtFloorChannel := make(chan int, 1)
+	//uncompletedExternalOrdersMatrixChangedChannel := make(chan [N_FLOORS][N_BUTTONS - 1]string, 1)
+	updateExternalLightsChannel := make(chan [N_FLOORS][N_BUTTONS - 1]string, 1)
 
 	//network channels
 	orderCompletedByThisElevatorChannel := make(chan ButtonInfo, 1)
 	externalOrderChannel := make(chan ButtonInfo, N_FLOORS*2-2) //N_FLOORS*2-2 = number of external buttons
 
 	updateElevatorInfoChannel := make(chan ElevatorInfo, 1)
-	uncompletedExternalOrdersMatrixChangedChannel := make(chan [N_FLOORS][N_BUTTONS - 1]string, 1)
 
 	// File handling
 	backupChannel := make(chan ElevatorInfo, 1)
@@ -53,9 +54,8 @@ func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string, programA
 
 	updateElevatorInfoChannel <- elevator
 	backupChannel <- elevator
-	//Running threads
 
-	go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel, uncompletedExternalOrders, orderCompletedByThisElevatorChannel, uncompletedExternalOrdersMatrixChangedChannel)
+	go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel, uncompletedExternalOrders, orderCompletedByThisElevatorChannel, updateExternalLightsChannel)
 	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel)
 	go fileHandler.BackupElevatorInfoToFile(backupChannel)
 
@@ -202,7 +202,7 @@ func Run_elevator(startingPoint ElevatorInfo, errorChannel chan string, programA
 			backupChannel <- elevator
 			programAliveChannel <- true
 
-		case uncompletedExternalOrders := <-uncompletedExternalOrdersMatrixChangedChannel:
+		case uncompletedExternalOrders := <-updateExternalLightsChannel:
 			StatusChannel <- "uncompletedExternalOrderMatrixChangedChannel"
 			for floor := 0; floor < N_FLOORS; floor++ {
 				for btn := 0; btn < N_BUTTONS-1; btn++ {

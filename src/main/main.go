@@ -2,19 +2,13 @@ package main
 
 import "elevator"
 import . "elevator_type"
-
-//import "network"
-
 import . "statusHandler"
 import "fileHandler"
-
-//import "strconv"
 
 import "flag"
 import "os"
 import "os/exec"
 import . "time"
-
 import "fmt"
 
 func main() {

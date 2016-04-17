@@ -7,7 +7,7 @@ type ElevatorState int
 
 const (
 	State_Idle     ElevatorState = 0
-	State_DoorOpen ElevatorState = 1 // Not used, remove
+	State_DoorOpen ElevatorState = 1
 	State_Moving   ElevatorState = 2
 )
 
@@ -26,7 +26,7 @@ type ElevatorInfo struct {
 	State        ElevatorState
 }
 
-type Button int // Should be ButtonType
+type Button int
 
 const (
 	BUTTON_OUTSIDE_UP     Button = 0
@@ -35,7 +35,7 @@ const (
 )
 
 type ButtonInfo struct {
-	Button Button //should be named ButtonType Button
+	Button Button
 	Floor  int
 	Value  int
 }

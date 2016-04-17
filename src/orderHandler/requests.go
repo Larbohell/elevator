@@ -3,9 +3,6 @@ package orderHandler
 import "elevator_type"
 
 func ShouldStop(elevator elevator_type.ElevatorInfo) bool {
-	// Returns true if anyone wants off or on (in the direction of travel), or if a request
-	// has been cleared while the elevator was on its way
-
 	switch elevator.Direction {
 	case elevator_type.Down:
 		if elevator.Requests[elevator.CurrentFloor][elevator_type.BUTTON_OUTSIDE_DOWN] == 1 ||
@@ -59,10 +56,6 @@ func requests_below(elevator elevator_type.ElevatorInfo) bool {
 	return false
 }
 
-func nearest_request_direction(elevator elevator_type.ElevatorInfo) {
-
-}
-
 func Requests_chooseDirection(elevator elevator_type.ElevatorInfo) elevator_type.Dir {
 	switch elevator.Direction {
 	case elevator_type.Up:
@@ -91,7 +84,6 @@ func Requests_chooseDirection(elevator elevator_type.ElevatorInfo) elevator_type
 		} else {
 			return elevator_type.Stop
 		}
-		//return nearest_request_direction()
 	}
 
 	return elevator_type.Up
