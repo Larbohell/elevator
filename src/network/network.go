@@ -383,7 +383,8 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 
 				orderCompletedChannel <- receivedMessage.ButtonInfo
 				uncompletedExternalOrders[receivedMessage.ButtonInfo.Floor][int(receivedMessage.ButtonInfo.Button)] = ""
-				msgToSlave := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, receivedMessage.ButtonInfo, uncompletedExternalOrders}
+				//msgToSlave := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, receivedMessage.ButtonInfo, uncompletedExternalOrders}
+				msgToSlave := Message{true, false, true, false, false, masterIP, BROADCAST_IP, elevator, receivedMessage.ButtonInfo, uncompletedExternalOrders}
 				SendUdpMessage(msgToSlave)
 
 				StatusChannel <- "Updated uncompletedExternalOrders sent to slave from Master"
