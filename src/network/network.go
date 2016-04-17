@@ -437,6 +437,7 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 		case oldExternalOrder := <-externalOrderFromDeadSlaveChannel:
 			StatusChannel <- "externalOrderFromDeadSlaveChannel--------------------------------------------------------------"
 			//StatusChannel <- "5"
+			uncompletedExternalOrders[oldExternalOrder.Floor][int(oldExternalOrder.Button)] = ""
 			externalOrderChannel <- oldExternalOrder
 
 			statusMessageToSlave = Message{true, false, false, false, false, masterIP, BROADCAST_IP, elevator, ButtonInfo{0, 0, 0}, uncompletedExternalOrders}
