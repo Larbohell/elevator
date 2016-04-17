@@ -375,7 +375,7 @@ func Master(elevator ElevatorInfo, externalOrderChannel chan ButtonInfo, updateE
 				StatusChannel <- "			Ordercompleted in Master"
 				orderCompletedChannel <- receivedMessage.ButtonInfo
 				uncompletedExternalOrders[receivedMessage.ButtonInfo.Floor][receivedMessage.ButtonInfo.Button] = ""
-				msgToSlave := Message{true, false, false, true, false, masterIP, BROADCAST_IP, elevator, receivedMessage.ButtonInfo, uncompletedExternalOrders}
+				msgToSlave := Message{true, false, true, false, false, masterIP, BROADCAST_IP, elevator, receivedMessage.ButtonInfo, uncompletedExternalOrders}
 				SendUdpMessage(msgToSlave)
 
 				uncompletedExternalOrdersMatrixChangedChannel <- uncompletedExternalOrders //Update own lights
