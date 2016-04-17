@@ -57,7 +57,7 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 	initialElevatorStateChannel <- elevator
 }
 
-func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, openDoorChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
+func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, openDoorChannel chan bool, keepDoorOpenChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
 	floorSensorChannel := make(chan int, 1)
 	elevator_init(doInit, startingPoint, floorSensorChannel, errorChannel, initialElevatorStateChannel)
 
@@ -77,19 +77,31 @@ func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel c
 
 			Elevator_set_door_open_lamp(1)
 
-			<-After(3 * Second)
+		loop:
+			for {
+				select {
+				case <-keepDoorOpenChannel:
+					break
+
+				case <-After(3 * Second):
+					break loop
+				}
+			}
+
+			//<-After(3 * Second)
 			Elevator_set_door_open_lamp(0)
 			//StatusChannel <- "IN DRIVER, openDoorChannel, door lamp should be off"
 			doorClosedChannel <- true
 			StatusChannel <- "---------------------------------- Door close signal sent from driver"
 
 		case floor := <-floorSensorChannel:
-			//StatusChannel <- "IN DRIVER: floorSensorChannel = " + strconv.Itoa(floor)
+			StatusChannel <- "IN DRIVER: floorSensorChannel = " + strconv.Itoa(floor)
+
 			if floor != -1 {
 				Elevator_set_floor_indicator(floor)
-				//StatusChannel <- "Before arrivedAtFloorChennel at floor " + strconv.Itoa(floor)
+				StatusChannel <- "Before arrivedAtFloorChennel at floor " + strconv.Itoa(floor)
 				arrivedAtFloorChannel <- floor
-				//StatusChannel <- "Arrived at floor: " + strconv.Itoa(floor)
+				StatusChannel <- "Arrived at floor: " + strconv.Itoa(floor)
 
 				//StatusChannel <- "Floor: " + strconv.Itoa(floor)
 			}
@@ -142,13 +154,13 @@ func read_floor_sensor(floorSensorChannel chan int) {
 		//StatusChannel <- "Sleep"
 		currentFloor := Elevator_get_floor_sensor_signal()
 		if currentFloor != -1 {
-			//StatusChannel <- "IN READ_FLOOR_SENSOR: Current floor = " + strconv.Itoa(currentFloor)
+			StatusChannel <- "IN READ_FLOOR_SENSOR: Current floor = " + strconv.Itoa(currentFloor)
 		}
 		if currentFloor != lastFloor {
 			lastFloor = currentFloor
-			//StatusChannel <- "Before floorSensorChannel" + strconv.Itoa(currentFloor)
+			StatusChannel <- "Before floorSensorChannel" + strconv.Itoa(currentFloor)
 			floorSensorChannel <- currentFloor
-			//StatusChannel <- "After floorSensorChannel, floor " + strconv.Itoa(currentFloor)
+			StatusChannel <- "After floorSensorChannel, floor " + strconv.Itoa(currentFloor)
 		}
 	}
 }

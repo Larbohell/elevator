@@ -35,6 +35,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 	setMovingDirectionChannel := make(chan Dir, 1)
 	openDoorChannel := make(chan bool, 1)
+	keepDoorOpenChannel := make(chan bool, 1)
 	setButtonLightChannel := make(chan ButtonInfo, 1)
 	clearButtonLightsAtFloorChannel := make(chan int, 1)
 
@@ -66,7 +67,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 	if firstTimeRunning {
 		StatusChannel <- "First time running, starting normal init"
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
+		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 
 		//elevator = <-initialElevatorStateChannel
 		StatusChannel <- "Current floor on first init = " + strconv.Itoa(elevator.CurrentFloor)
@@ -75,7 +76,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 		StatusChannel <- "Current floor on init from backup process = " + strconv.Itoa(elevator.CurrentFloor)
 
 		// Run driver with startingPoint
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
+		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 	}
 
 	elevator = <-initialElevatorStateChannel
@@ -158,12 +159,23 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 						stop <- false // Should not open door
 					}
 				*/
-				if elevator.CurrentFloor == buttonPushed.Floor && buttonPushed.Button != BUTTON_INSIDE_COMMAND {
-					orderCompletedByThisElevatorChannel <- buttonPushed
-					//stop <- false // Should not open door
+
+				if elevator.CurrentFloor == buttonPushed.Floor {
+					keepDoorOpenChannel <- true
+					if buttonPushed.Button != BUTTON_INSIDE_COMMAND {
+						orderCompletedByThisElevatorChannel <- buttonPushed
+					}
 				} else {
 					elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
 				}
+				/*
+					if elevator.CurrentFloor == buttonPushed.Floor && buttonPushed.Button != BUTTON_INSIDE_COMMAND {
+						orderCompletedByThisElevatorChannel <- buttonPushed
+						//stop <- false // Should not open door
+					} else {
+						elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
+					}
+				*/
 				clearButtonLightsAtFloorChannel <- elevator.CurrentFloor
 
 				updateElevatorInfoChannel <- elevator
