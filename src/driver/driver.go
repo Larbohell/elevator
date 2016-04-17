@@ -9,7 +9,7 @@ import "strconv"
 
 // Make all driver funcs except Driver() lowercase
 
-func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel chan int, errorChannel chan string, initFloorChannel chan int, initIsFinished chan bool) {
+func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, initIsFinished chan bool) {
 	Elevator_c_init()
 
 	go read_floor_sensor(floorSensorChannel)
@@ -22,15 +22,14 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 		Elevator_set_motor_direction(MOTOR_DIRECTION_DOWN)
 	loop:
 		for {
-			//time.Sleep(10 * time.Millisecond)
 			select {
 
-			case elevator.CurrentFloor = <-floorSensorChannel:
-				//floorSensorChannel <- floor
-				if elevator.CurrentFloor != -1 {
+			case floor = <-floorSensorChannel:
+				if floor != -1 {
+					elevator.CurrentFloor = floor
+					elevator.State = State_Idle
 					StatusChannel <- "in doInit, currentFloor hit floor, currentFloor = " + strconv.Itoa(elevator.CurrentFloor)
 					Elevator_set_motor_direction(MOTOR_DIRECTION_STOP)
-					elevator.State = State_Idle
 					break loop
 				}
 
@@ -41,52 +40,9 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 			}
 		}
 	}
-	/*
-		if doInit {
-			StatusChannel <- "In doInit on primary init"
-			floor := <-floorSensorChannel
-			Elevator_set_door_open_lamp(0)
-
-			if elevator.State == State_Moving {
-				Elevator_set_motor_direction(Motor_direction(elevator.Direction))
-			} else if floor != -1 {
-				elevator.CurrentFloor = floor
-				Elevator_set_motor_direction(MOTOR_DIRECTION_STOP)
-				StatusChannel <- "In doInit, in floor, which means state = " + strconv.Itoa(int(elevator.State))
-			} else {
-				Elevator_set_motor_direction(MOTOR_DIRECTION_DOWN)
-
-			loop:
-				for {
-					//time.Sleep(10 * time.Millisecond)
-					select {
-
-					case elevator.CurrentFloor = <-floorSensorChannel:
-						//floorSensorChannel <- floor
-						if elevator.CurrentFloor != -1 {
-							StatusChannel <- "in doInit, currentFloor hit floor, currentFloor = " + strconv.Itoa(elevator.CurrentFloor)
-							Elevator_set_motor_direction(MOTOR_DIRECTION_STOP)
-							break loop
-						}
-
-					case <-After(10 * Second):
-						Elevator_set_motor_direction(MOTOR_DIRECTION_STOP)
-						errorChannel <- "Elevator initialization failed. Timeout: Did not reach floor."
-						return
-					}
-				}
-
-			}
-			StatusChannel <- "Sending currentFloor = " + strconv.Itoa(elevator.CurrentFloor) + " to elevator.go"
-			initialElevatorStateChannel <- elevator
-		}
-	*/
-
-	//var initialRequests [N_FLOORS][N_BUTTONS]int
-	//elevator := ElevatorInfo{floor, Stop, initialRequests, State_Idle}
 
 	//Set all lights to correct values
-	for floor := 0; floor < N_FLOORS; floor++ {
+	for floor = 0; floor < N_FLOORS; floor++ {
 		for btn := 0; btn < N_BUTTONS; btn++ {
 			if floor != 0 && btn == int(BUTTON_OUTSIDE_DOWN) {
 				Elevator_set_button_lamp(BUTTON_OUTSIDE_DOWN, floor, elevator.Requests[floor][btn])
@@ -98,16 +54,12 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 			Elevator_set_button_lamp(BUTTON_INSIDE_COMMAND, floor, elevator.Requests[floor][btn])
 		}
 	}
-	//Elevator_set_floor_indicator(0)
-	initFloorChannel <- floor
-	//initialElevatorStateChannel <- elevator
-	StatusChannel <- "6"
-	//initIsFinished <- true
+	initialElevatorStateChannel <- elevator
 }
 
-func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, openDoorChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, initIsFinished chan bool, arrivedAtFloorChannel chan int, errorChannel chan string, initFloorChannel chan int, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
+func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, openDoorChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, initIsFinished chan bool, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
 	floorSensorChannel := make(chan int, 1)
-	elevator_init(doInit, startingPoint, floorSensorChannel, errorChannel, initFloorChannel, initIsFinished)
+	elevator_init(doInit, startingPoint, floorSensorChannel, errorChannel, initialElevatorStateChannel, initIsFinished)
 
 	go read_buttons(newOrderChannel)
 

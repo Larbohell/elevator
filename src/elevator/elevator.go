@@ -36,7 +36,6 @@ import "strconv"
 
 func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChannel chan string) {
 
-	//const localIP string = "129.241.187.156" //workspace 11
 	var elevator ElevatorInfo
 	var uncompletedExternalOrders [N_FLOORS][N_BUTTONS - 1]string //Could be declared in Slave
 
@@ -48,18 +47,16 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 	clearButtonLightsAtFloorChannel := make(chan int, 1)
 
 	//Debugging
-	//errorChannel := make(chan string)
-	//StatusChannel = make(chan string)
 
 	newOrderChannel := make(chan ButtonInfo, 1)
 	removeOrderChannel := make(chan ButtonInfo, 1)
 	initIsFinished := make(chan bool)
-	initFloorChannel := make(chan int)
+	//initFloorChannel := make(chan int)
 	arrivedAtFloorChannel := make(chan int, 1)
 
 	addToRequestsChannel := make(chan ButtonInfo)
 	stop := make(chan bool, 1)
-	//initialElevatorStateChannel := make(chan ElevatorInfo, 1)
+	initialElevatorStateChannel := make(chan ElevatorInfo)
 	doorClosedChannel := make(chan bool, 1)
 
 	//network channels
@@ -75,15 +72,11 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 	// File handling
 	backupChannel := make(chan ElevatorInfo, 1)
 
-	//init
-	//go Error_handler(errorChannel)
-	//go Status_handler()
-
 	elevator = startingPoint
 
 	if firstTimeRunning {
 		StatusChannel <- "First time running, starting normal init"
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initFloorChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
+		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 
 		//elevator = <-initialElevatorStateChannel
 		StatusChannel <- "Current floor on first init = " + strconv.Itoa(elevator.CurrentFloor)
@@ -92,11 +85,10 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 		StatusChannel <- "Current floor on init from backup process = " + strconv.Itoa(elevator.CurrentFloor)
 
 		// Run driver with startingPoint
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initFloorChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
+		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, initIsFinished, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 	}
-	//elevator = <-initialElevatorStateChannel
-	//<-initIsFinished
-	elevator.CurrentFloor = <-initFloorChannel
+
+	elevator = <-initialElevatorStateChannel
 
 	StatusChannel <- "Recovery/init done"
 	StatusChannel <- "IN ELEVATOR: Elevator currentFloor = " + strconv.Itoa(elevator.CurrentFloor) + " , direction = " + strconv.Itoa(int(elevator.Direction)) + ", State: " + strconv.Itoa(int(elevator.State))
@@ -106,11 +98,9 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 	//Running threads
 
 	go network.Slave(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel, uncompletedExternalOrders, orderCompletedByThisElevatorChannel, uncompletedExternalOrdersMatrixChangedChannel)
-	//go network.Master(elevator, externalOrderChannel, updateElevatorInfoChannel, addToRequestsChannel)
 	go orderHandler.OrderHandler(newOrderChannel, removeOrderChannel, addToRequestsChannel, externalOrderChannel)
 	go fileHandler.BackupElevatorInfoToFile(backupChannel)
 
-	//if !firstTimeRunning {
 	switch elevator.State {
 	case State_DoorOpen:
 		StatusChannel <- "On init not first time running, Door Open"
@@ -122,7 +112,6 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 	case State_Moving:
 		break
 	}
-	//}
 
 	for {
 		StatusChannel <- "In main select: "
@@ -229,9 +218,6 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 			previousFloor = elevator.CurrentFloor
 			elevator.CurrentFloor = arrivedAtFloor
-
-			//handleOrdersChannel <- elevator.CurrentFloor
-			//nextOrder := <-getNextOrderChannel
 
 			direction := elevator.CurrentFloor - previousFloor
 
