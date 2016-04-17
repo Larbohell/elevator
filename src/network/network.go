@@ -520,7 +520,7 @@ func slaveWatchdog(slaveIP string, slaveIsAliveChannel chan bool, terminateSlave
 		case <-slaveIsAliveChannel:
 			break
 
-		case <-After(500 * Millisecond):
+		case <-After(200 * Millisecond):
 			terminateSlaveChannel <- slaveIP
 			StatusChannel <- "slaveWatchdog timed out, slaveWatchdog thread terminated"
 			return
@@ -540,11 +540,12 @@ func orderWatchdog(slaveIP string, button ButtonInfo, slaveIsAliveIPChannel chan
 	for {
 		select {
 		case receivedSlaveIP := <-slaveIsAliveIPChannel:
-			// HAS TO BE PUT BACK, OR DONE SOME OTHER WAY (MAYBE BY SENDING BOTH IP AND BUTTON), BECAUSE MORE THAN ONE ORDERWATCHDOG CAN BE INTERESTED IN WETHER ONE
+			// HAS TO BE PUT BACK, OR DONE SOME OTHER WAY (MAYBE BY SENDING BOTH IP AND BUTTON), BECAUSE MORE THAN ONE ORDERWATCHDOG CAN BE INTERESTED IN WHETHER ONE
 			// SLAVE IS ALIVE
 
 			//////////////////////////////////// IMPORTANTE //////////////////////////////////
 			if receivedSlaveIP == slaveIP {
+				StatusChannel <- "Received ALIVE from slave"
 				break
 			} else {
 				slaveIsAliveIPChannel <- receivedSlaveIP
@@ -552,6 +553,7 @@ func orderWatchdog(slaveIP string, button ButtonInfo, slaveIsAliveIPChannel chan
 
 		case receivedButton := <-orderCompletedChannel:
 			if receivedButton == button {
+				StatusChannel <- "Order completed, orderWatchdog terminates, IP " + slaveIP + "with order button " + strconv.Itoa(int(receivedButton.Button)) + " in floor " + strconv.Itoa(receivedButton.Floor)
 				return
 			}
 			orderCompletedChannel <- receivedButton

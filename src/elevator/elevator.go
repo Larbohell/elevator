@@ -21,9 +21,8 @@ import "strconv"
 
 //TODO!!!
 
-//uncompletedExternalList is not received by Slaves!
-
-// The problems above might have been solved by updating elevator in Master thread, check this
+// Light syncing is buggy
+// On init: Check floor signal and compare with CUrrentFloor from file (elevator sometimes thinks it's somewhere else after init)
 
 // LOOK AT ORDERWATCHDOG!!!!!!!!!!!!!!!!!
 
