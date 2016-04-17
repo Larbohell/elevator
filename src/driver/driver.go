@@ -20,6 +20,7 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 
 	if floor == -1 && elevator.State != State_Moving {
 		Elevator_set_motor_direction(MOTOR_DIRECTION_DOWN)
+
 	loop:
 		for {
 			select {
@@ -39,6 +40,8 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 				return
 			}
 		}
+	} else if elevator.State == State_Moving {
+		Elevator_set_motor_direction(Motor_direction(elevator.Direction))
 	}
 
 	//Set all lights to correct values
@@ -57,7 +60,7 @@ func elevator_init(doInit bool, startingPoint ElevatorInfo, floorSensorChannel c
 	initialElevatorStateChannel <- elevator
 }
 
-func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, openDoorChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
+func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel chan Dir, openDoorChannel chan bool, keepDoorOpenChannel chan bool, setButtonLightChannel chan ButtonInfo, newOrderChannel chan ButtonInfo, arrivedAtFloorChannel chan int, errorChannel chan string, initialElevatorStateChannel chan ElevatorInfo, doorClosedChannel chan bool, clearButtonLightsAtFloorChannel chan int) {
 	floorSensorChannel := make(chan int, 1)
 	elevator_init(doInit, startingPoint, floorSensorChannel, errorChannel, initialElevatorStateChannel)
 
@@ -77,7 +80,18 @@ func Driver(doInit bool, startingPoint ElevatorInfo, setMovingDirectionChannel c
 
 			Elevator_set_door_open_lamp(1)
 
-			<-After(3 * Second)
+		loop:
+			for {
+				select {
+				case <-keepDoorOpenChannel:
+					break
+
+				case <-After(3 * Second):
+					break loop
+				}
+			}
+
+			//<-After(3 * Second)
 			Elevator_set_door_open_lamp(0)
 			//StatusChannel <- "IN DRIVER, openDoorChannel, door lamp should be off"
 			doorClosedChannel <- true

@@ -20,21 +20,12 @@ import "strconv"
 //"129.24.187.158" = workspace 10
 
 //TODO!!!
-//Open door when elevator idle and buttons pushed in same floor, and turn off lights
-// Aggressive button push on external buttons in floor 0 or 3 makes the elevator pass that floor and go out of bounds
-// Process-pairs thing, write info to file so that backup can take over where the main process died
+
 //uncompletedExternalList is not received by Slaves!
 
 // The problems above might have been solved by updating elevator in Master thread, check this
 
-// In driver.read_floor_sensor() -> After backup process takes over, floor sensor never returns a value != -1, which means that arrivedAtFloorCHannel in elevator.go never activates
-// so the elevator never stops at a floor
-
-// Button light don't light up before after door close
-
 // LOOK AT ORDERWATCHDOG!!!!!!!!!!!!!!!!!
-
-//Case DoorOpen: lights
 
 func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChannel chan string) {
 
@@ -45,6 +36,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 	setMovingDirectionChannel := make(chan Dir, 1)
 	openDoorChannel := make(chan bool, 1)
+	keepDoorOpenChannel := make(chan bool, 1)
 	setButtonLightChannel := make(chan ButtonInfo, 1)
 	clearButtonLightsAtFloorChannel := make(chan int, 1)
 
@@ -63,7 +55,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 	orderCompletedByThisElevatorChannel := make(chan ButtonInfo, 1)
 
 	//___________________________________________////////////////////////////////////////////////////////_____________________________
-	externalOrderChannel := make(chan ButtonInfo, 1) //N_FLOORS*2-2 = number of external buttons
+	externalOrderChannel := make(chan ButtonInfo, N_FLOORS*2-2) //N_FLOORS*2-2 = number of external buttons
 	///////////////////////////////////////____________--------------------************************************************************
 
 	updateElevatorInfoChannel := make(chan ElevatorInfo, 1)
@@ -76,7 +68,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 
 	if firstTimeRunning {
 		StatusChannel <- "First time running, starting normal init"
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
+		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 
 		//elevator = <-initialElevatorStateChannel
 		StatusChannel <- "Current floor on first init = " + strconv.Itoa(elevator.CurrentFloor)
@@ -85,7 +77,7 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 		StatusChannel <- "Current floor on init from backup process = " + strconv.Itoa(elevator.CurrentFloor)
 
 		// Run driver with startingPoint
-		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
+		go driver.Driver(false, elevator, setMovingDirectionChannel, openDoorChannel, keepDoorOpenChannel, setButtonLightChannel, newOrderChannel, arrivedAtFloorChannel, errorChannel, initialElevatorStateChannel, doorClosedChannel, clearButtonLightsAtFloorChannel)
 	}
 
 	elevator = <-initialElevatorStateChannel
@@ -168,12 +160,22 @@ func Run_elevator(firstTimeRunning bool, startingPoint ElevatorInfo, errorChanne
 						stop <- false // Should not open door
 					}
 				*/
-				if elevator.CurrentFloor == buttonPushed.Floor && buttonPushed.Button != BUTTON_INSIDE_COMMAND {
-					orderCompletedByThisElevatorChannel <- buttonPushed
-					//stop <- false // Should not open door
+				if elevator.CurrentFloor == buttonPushed.Floor {
+					keepDoorOpenChannel <- true
+					if buttonPushed.Button != BUTTON_INSIDE_COMMAND {
+						orderCompletedByThisElevatorChannel <- buttonPushed
+					}
 				} else {
 					elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
 				}
+				/*
+					if elevator.CurrentFloor == buttonPushed.Floor && buttonPushed.Button != BUTTON_INSIDE_COMMAND {
+						orderCompletedByThisElevatorChannel <- buttonPushed
+						//stop <- false // Should not open door
+					} else {
+						elevator = orderHandler.AddFloorToRequests(elevator, buttonPushed)
+					}
+				*/
 				clearButtonLightsAtFloorChannel <- elevator.CurrentFloor
 
 				updateElevatorInfoChannel <- elevator
