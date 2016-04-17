@@ -76,7 +76,7 @@ func exitProgramIfTimeout(programAliveChannel chan bool) {
 		select {
 		case <-programAliveChannel:
 			break
-		case <-After(5 * Second):
+		case <-After(100 * Second):
 			os.Exit(1)
 		}
 	}
